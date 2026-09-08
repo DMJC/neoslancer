@@ -12,12 +12,23 @@ how the original engine behaves.
 
 ## Status
 
-Early scaffolding: window/GL-context bring-up and a bare main loop. No
-gameplay or original-engine behavior has been ported yet.
+- Window/GL-context bring-up, config (`starlancer.ini`), and command-line
+  parsing, ported from `WinMain`'s bootstrap sequence.
+- A `.hog`/BigFile archive reader (container, TOC, RefPack decompression),
+  validated against a real `RESOURCE.HOG`.
+- The front-end menu system (`RunMenuScreenLoop`'s full 12-screen dispatch
+  table): a real, navigable Main Menu and Options hub, with Sound/Video/
+  Controls options genuinely reading and writing `starlancer.ini`. Screens
+  needing systems this project doesn't have yet (save files, mission
+  briefing, multiplayer, the ship-interior VR loop) are honest
+  "not implemented" placeholders rather than guesses.
+
+No actual gameplay (flight/combat, mission loading, rendering of real
+assets) has been ported yet.
 
 ## Building
 
-Dependencies: CMake >= 3.20, a C++20 compiler, SDL2, OpenGL, GLEW.
+Dependencies: CMake >= 3.20, a C++20 compiler, SDL2, SDL2_ttf, OpenGL, GLEW.
 
 ```sh
 cmake -S . -B build
