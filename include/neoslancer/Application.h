@@ -21,7 +21,9 @@ public:
 
     // iniPath is threaded through to the options menu screens, which
     // read/write starlancer.ini directly (see SoundOptionsScreen etc.).
-    bool init(const WindowConfig& config, const std::string& iniPath);
+    // dataRoot is threaded through to VRRoomScreen, which resolves real
+    // .bik movie files under it (cd1/cd2 subdirectories).
+    bool init(const WindowConfig& config, const std::string& iniPath, const std::string& dataRoot);
     void run();
     void shutdown();
 

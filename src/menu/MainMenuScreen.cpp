@@ -10,6 +10,10 @@ void MainMenuScreen::onEnter(MenuManager& manager) {
         {"NEW GAME", [&manager]() { manager.goTo(MenuScreenId::NewGameSetup); }},
         {"MULTIPLAYER", [&manager]() { manager.goTo(MenuScreenId::MultiplayerSetup); }},
         {"OPTIONS", [&manager]() { manager.goTo(MenuScreenId::OptionsMenu); }},
+        // Not an original main-menu button - the real entry into the VR
+        // loop is via RunMissionBriefingScreen (screen 7), which this port
+        // hasn't built; this is a direct shortcut to it for now.
+        {"SHIP INTERIOR (DEMO)", [&manager]() { manager.goTo(MenuScreenId::MissionBriefing); }},
         {"QUIT", [&manager]() { manager.requestQuitApplication(); }},
     });
 }
@@ -32,7 +36,7 @@ void MainMenuScreen::render(UIRenderer& renderer, Font& font, int windowWidth, i
     renderer.drawText(font, title, (static_cast<float>(windowWidth) - static_cast<float>(titleW)) * 0.5f,
                        static_cast<float>(windowHeight) * 0.2f, Color{0.75f, 0.85f, 1.0f, 1.0f});
 
-    const float buttonWidth = 260.0f;
+    const float buttonWidth = 340.0f;
     const float buttonHeight = 44.0f;
     const float gap = 12.0f;
     const float x = (static_cast<float>(windowWidth) - buttonWidth) * 0.5f;

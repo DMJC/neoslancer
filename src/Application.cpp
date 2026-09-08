@@ -1,6 +1,7 @@
 #include "neoslancer/Application.h"
 
 #include "neoslancer/menu/ControlsOptionsScreen.h"
+#include "neoslancer/menu/IntroScreen.h"
 #include "neoslancer/menu/MainMenuScreen.h"
 #include "neoslancer/menu/MenuScreenIds.h"
 #include "neoslancer/menu/NetworkDisconnectScreen.h"
@@ -8,6 +9,7 @@
 #include "neoslancer/menu/PlaceholderScreen.h"
 #include "neoslancer/menu/SoundOptionsScreen.h"
 #include "neoslancer/menu/VideoOptionsScreen.h"
+#include "neoslancer/vr/VRRoomScreen.h"
 
 #include <GL/glew.h>
 #include <SDL.h>
@@ -19,9 +21,10 @@ namespace neoslancer {
 
 namespace {
 
-void registerMenuScreens(MenuManager& manager, const std::string& iniPath) {
+void registerMenuScreens(MenuManager& manager, const std::string& iniPath, const std::string& dataRoot) {
     using namespace MenuScreenId;
 
+    manager.registerScreen(Intro, std::make_unique<IntroScreen>(dataRoot));
     manager.registerScreen(MainMenu, std::make_unique<MainMenuScreen>());
     manager.registerScreen(OptionsMenu, std::make_unique<OptionsMenuScreen>());
     manager.registerScreen(SoundOptions, std::make_unique<SoundOptionsScreen>(iniPath));
@@ -29,14 +32,18 @@ void registerMenuScreens(MenuManager& manager, const std::string& iniPath) {
     manager.registerScreen(ControlsOptions, std::make_unique<ControlsOptionsScreen>(iniPath));
     manager.registerScreen(NetworkDisconnect, std::make_unique<NetworkDisconnectScreen>());
 
+    // RunMissionBriefingScreen itself (the briefing movie + speech-tag
+    // selection) isn't ported - but it's the only confirmed real path
+    // into RunShipInteriorVRLoop, so screen ID 7 goes straight to the
+    // real VR loop instead, always starting at the late-campaign entry
+    // node (see VRRoomScreen.h for exactly what is/isn't ported there).
+    manager.registerScreen(MissionBriefing, std::make_unique<VRRoomScreen>(dataRoot));
+
     // Real RunMenuScreenLoop handlers this port hasn't built real behavior
     // for yet (confidence_db.md has what each one actually does).
     manager.registerScreen(NewGameSetup,
                             std::make_unique<PlaceholderScreen>(
                                 "NEW GAME", "Campaign/pilot setup", MainMenu));
-    manager.registerScreen(MissionBriefing,
-                            std::make_unique<PlaceholderScreen>(
-                                "MISSION BRIEFING", "Briefing movie + ship-interior handoff", MainMenu));
     manager.registerScreen(SaveGame,
                             std::make_unique<PlaceholderScreen>("SAVE GAME", "Save-slot browser", OptionsMenu));
     manager.registerScreen(LoadGame,
@@ -54,7 +61,7 @@ void registerMenuScreens(MenuManager& manager, const std::string& iniPath) {
                             std::make_unique<PlaceholderScreen>(
                                 "JOIN GAME", "Multiplayer lobby (join)", MultiplayerSetup));
 
-    manager.goTo(MainMenu);
+    manager.goTo(Intro);
 }
 
 } // namespace
@@ -63,7 +70,7 @@ Application::~Application() {
     shutdown();
 }
 
-bool Application::init(const WindowConfig& config, const std::string& iniPath) {
+bool Application::init(const WindowConfig& config, const std::string& iniPath, const std::string& dataRoot) {
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS) != 0) {
         std::fprintf(stderr, "SDL_Init failed: %s\n", SDL_GetError());
         return false;
@@ -100,7 +107,7 @@ bool Application::init(const WindowConfig& config, const std::string& iniPath) {
     m_uiRenderer.resize(m_window.width(), m_window.height());
 
     m_menuManager = std::make_unique<MenuManager>(m_uiRenderer, m_font);
-    registerMenuScreens(*m_menuManager, iniPath);
+    registerMenuScreens(*m_menuManager, iniPath, dataRoot);
 
     m_initialized = true;
     return true;

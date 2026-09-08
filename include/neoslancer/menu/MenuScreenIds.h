@@ -22,4 +22,9 @@ constexpr int ControlsOptions = 16;     // RunControlsOptionsScreen
 constexpr int MultiplayerLobbyHost = 17; // RunMultiplayerLobbyScreen, mode=host
 constexpr int MultiplayerLobbyJoin = 18; // RunMultiplayerLobbyScreen, mode=join
 
+// Not one of RunMenuScreenLoop's 12 real IDs - the logo/splash movie
+// sequence plays from WinMain's own bootstrap, before the menu system is
+// ever entered. -1 avoids colliding with any real (non-negative) ID.
+constexpr int Intro = -1;
+
 } // namespace neoslancer::MenuScreenId

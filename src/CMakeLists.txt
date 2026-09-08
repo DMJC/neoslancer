@@ -8,6 +8,7 @@ add_library(neoslancer_data STATIC
     ResourceLoader.cpp
     WinVfxFont.cpp
     WinVfxSprite.cpp
+    vr/VRRoomGraph.cpp
 )
 
 target_include_directories(neoslancer_data PUBLIC
@@ -32,10 +33,13 @@ add_executable(neoslancer
     menu/MainMenuScreen.cpp
     menu/OptionsMenuScreen.cpp
     menu/PlaceholderScreen.cpp
+    menu/IntroScreen.cpp
     menu/SoundOptionsScreen.cpp
     menu/VideoOptionsScreen.cpp
     menu/ControlsOptionsScreen.cpp
     menu/NetworkDisconnectScreen.cpp
+    video/BinkVideoPlayer.cpp
+    vr/VRRoomScreen.cpp
 )
 
 target_include_directories(neoslancer PRIVATE
@@ -48,6 +52,7 @@ target_link_libraries(neoslancer PRIVATE
     SDL2_ttf::SDL2_ttf
     OpenGL::GL
     GLEW::GLEW
+    PkgConfig::FFMPEG
 )
 
 target_compile_options(neoslancer PRIVATE

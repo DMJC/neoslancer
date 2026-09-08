@@ -27,6 +27,11 @@ public:
 
     void drawRect(float x, float y, float w, float h, Color color) const;
 
+    // Draws an arbitrary caller-owned GL texture (e.g. a decoded video
+    // frame) as one quad. tint multiplies the sampled color.
+    void drawTexture(GLuint texture, float x, float y, float w, float h,
+                      Color tint = {1.0f, 1.0f, 1.0f, 1.0f}) const;
+
     // Renders (and caches) text as a single texture, then draws it as one
     // quad. color tints the (white) glyph texture.
     void drawText(Font& font, const std::string& text, float x, float y, Color color);

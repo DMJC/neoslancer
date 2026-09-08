@@ -102,6 +102,10 @@ void UIRenderer::drawRect(float x, float y, float w, float h, Color color) const
     drawTexturedRect(x, y, w, h, 0, color);
 }
 
+void UIRenderer::drawTexture(GLuint texture, float x, float y, float w, float h, Color tint) const {
+    drawTexturedRect(x, y, w, h, texture, tint);
+}
+
 void UIRenderer::drawTexturedRect(float x, float y, float w, float h, GLuint texture, Color color) const {
     m_shader.use();
     glUniformMatrix4fv(m_uProjection, 1, GL_FALSE, m_projection);
