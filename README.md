@@ -21,12 +21,13 @@ how the original engine behaves.
   Controls options genuinely reading and writing `starlancer.ini`. Screens
   needing systems this project doesn't have yet (save files, multiplayer)
   are honest "not implemented" placeholders rather than guesses.
-- Parsers for the WinVFX `.fnt`/`.spr` asset formats (menu fonts and UI
-  sprites), recovered from `winvfx8.dll` directly (a third-party 2D
-  middleware library the original engine never parses these itself -
-  see `WinVfxFont.h`/`WinVfxSprite.h`) and validated against real game
-  data. Not yet wired into rendering - menu text still uses a placeholder
-  system font via SDL_ttf.
+- The WinVFX `.fnt`/`.spr`/`.ccb` asset formats (menu fonts, UI sprites,
+  and the master color palette), recovered from `winvfx8.dll` directly
+  (a third-party 2D middleware library the original engine never parses
+  these itself - see `WinVfxFont.h`/`WinVfxSprite.h`/`WinVfxPalette.h`)
+  and rendered as real GL textures (`WinVfxRenderer.h`). The Main Menu's
+  title and every button label render with the real `handel.fnt` bitmap
+  font; other screens still use a placeholder system font via SDL_ttf.
 - The ship-interior VR loop (`RunShipInteriorVRLoop`): real hotspot
   navigation over a real (partial) slice of the actual room graph,
   re-derived from `Lancer.exe`'s own data, with real `.bik` video
