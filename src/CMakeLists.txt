@@ -6,6 +6,8 @@ add_library(neoslancer_data STATIC
     BigFile.cpp
     RefPack.cpp
     ResourceLoader.cpp
+    WinVfxFont.cpp
+    WinVfxSprite.cpp
 )
 
 target_include_directories(neoslancer_data PUBLIC
