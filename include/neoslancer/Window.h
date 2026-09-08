@@ -12,6 +12,7 @@ struct WindowConfig {
     int height = 720;
     bool fullscreen = false;
     bool vsync = true;
+    int gamma = 100; // percent, 100 = normal; see starlancer.ini's [Device] gamma key.
 };
 
 // Owns the SDL window and its OpenGL context.

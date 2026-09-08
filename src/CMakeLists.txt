@@ -2,6 +2,10 @@ add_executable(neoslancer
     main.cpp
     Application.cpp
     Window.cpp
+    IniFile.cpp
+    GameConfig.cpp
+    GamePaths.cpp
+    CommandLine.cpp
 )
 
 target_include_directories(neoslancer PRIVATE

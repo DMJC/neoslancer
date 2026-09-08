@@ -21,6 +21,11 @@ bool Window::create(const WindowConfig& config) {
 
     uint32_t flags = SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI;
     if (config.fullscreen) {
+        // Borderless-at-desktop-resolution rather than an exclusive mode
+        // switch to Xres/Yres: most modern Linux compositors (Wayland
+        // especially) don't honor arbitrary exclusive-fullscreen mode
+        // switches, so this is the reliable choice even though it means
+        // [Device] Xres/Yres only take effect in windowed mode.
         flags |= SDL_WINDOW_FULLSCREEN_DESKTOP;
     }
 
@@ -43,6 +48,11 @@ bool Window::create(const WindowConfig& config) {
     }
 
     SDL_GL_SetSwapInterval(config.vsync ? 1 : 0);
+
+    // Best-effort: many modern display servers (Wayland, most compositors)
+    // don't support legacy gamma ramps at all, so failure here is silently
+    // ignored rather than treated as fatal.
+    SDL_SetWindowBrightness(m_window, static_cast<float>(config.gamma) / 100.0f);
 
     glewExperimental = GL_TRUE;
     GLenum glewStatus = glewInit();
