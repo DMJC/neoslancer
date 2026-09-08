@@ -19,22 +19,29 @@ how the original engine behaves.
 - The front-end menu system (`RunMenuScreenLoop`'s full 12-screen dispatch
   table): a real, navigable Main Menu and Options hub, with Sound/Video/
   Controls options genuinely reading and writing `starlancer.ini`. Screens
-  needing systems this project doesn't have yet (save files, mission
-  briefing, multiplayer, the ship-interior VR loop) are honest
-  "not implemented" placeholders rather than guesses.
+  needing systems this project doesn't have yet (save files, multiplayer)
+  are honest "not implemented" placeholders rather than guesses.
 - Parsers for the WinVFX `.fnt`/`.spr` asset formats (menu fonts and UI
   sprites), recovered from `winvfx8.dll` directly (a third-party 2D
   middleware library the original engine never parses these itself -
   see `WinVfxFont.h`/`WinVfxSprite.h`) and validated against real game
   data. Not yet wired into rendering - menu text still uses a placeholder
   system font via SDL_ttf.
+- The ship-interior VR loop (`RunShipInteriorVRLoop`): real hotspot
+  navigation over a real (partial) slice of the actual room graph,
+  re-derived from `Lancer.exe`'s own data, with real `.bik` video
+  playback via FFmpeg's independent Bink decoder. Reachable from the
+  Main Menu's "SHIP INTERIOR (DEMO)" button. Plus the logo/splash intro
+  movie sequence WinMain plays before the menu ever appears.
 
-No actual gameplay (flight/combat, mission loading, rendering of real
-assets) has been ported yet.
+No actual gameplay (flight/combat, mission loading, mission briefing)
+has been ported yet.
 
 ## Building
 
-Dependencies: CMake >= 3.20, a C++20 compiler, SDL2, SDL2_ttf, OpenGL, GLEW.
+Dependencies: CMake >= 3.20, a C++20 compiler, SDL2, SDL2_ttf, OpenGL, GLEW,
+and FFmpeg (libavformat/libavcodec/libavutil/libswscale, found via
+pkg-config).
 
 ```sh
 cmake -S . -B build
