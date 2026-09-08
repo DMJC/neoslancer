@@ -1,4 +1,5 @@
 #include "neoslancer/Application.h"
+#include "neoslancer/BigFile.h"
 #include "neoslancer/CommandLine.h"
 #include "neoslancer/GameConfig.h"
 #include "neoslancer/GamePaths.h"
@@ -20,6 +21,17 @@ int main(int argc, char** argv) {
     }
     if (options.greyscale) {
         std::printf("neoslancer: -greyscale requested (not implemented yet)\n");
+    }
+
+    // WinMain step 6 ("Resource load"): the original treats a failed
+    // RESOURCE.HOG open as fatal ("main init: load failed on resource").
+    // Nothing in neoslancer consumes archive resources yet, so a missing
+    // archive is logged rather than treated as fatal for now.
+    neoslancer::BigFileArchive resourceArchive;
+    if (resourceArchive.open(paths.root + "/RESOURCE.HOG")) {
+        std::printf("neoslancer: opened RESOURCE.HOG (%zu entries)\n", resourceArchive.entries().size());
+    } else {
+        std::printf("neoslancer: RESOURCE.HOG not found under data root (no assets loaded)\n");
     }
 
     neoslancer::Application app;
