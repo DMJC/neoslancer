@@ -24,7 +24,8 @@ constexpr int kReferenceHeight = 480;
 
 } // namespace
 
-VRRoomScreen::VRRoomScreen(std::string dataRoot) : m_dataRoot(std::move(dataRoot)) {}
+VRRoomScreen::VRRoomScreen(std::string dataRoot, const MenuAssets* assets)
+    : m_dataRoot(std::move(dataRoot)), m_assets(assets) {}
 
 std::string VRRoomScreen::resolveMoviePath(const std::string& fileName) const {
     if (fileName.empty()) {
@@ -151,11 +152,18 @@ void VRRoomScreen::render(UIRenderer& renderer, Font& font, int windowWidth, int
                               static_cast<float>(windowHeight));
     } else {
         const std::string msg = "(no movie loaded for this room)";
+        const Color msgTint{0.8f, 0.3f, 0.3f, 1.0f};
         int w = 0, h = 0;
-        renderer.measureText(font, msg, w, h);
-        renderer.drawText(font, msg, (static_cast<float>(windowWidth) - static_cast<float>(w)) * 0.5f,
-                           (static_cast<float>(windowHeight) - static_cast<float>(h)) * 0.5f,
-                           Color{0.8f, 0.3f, 0.3f, 1.0f});
+        if (m_assets && m_assets->loaded) {
+            m_assets->renderer.measureText(m_assets->font, msg, w, h);
+            m_assets->renderer.drawText(renderer, m_assets->font, m_assets->palette, msg,
+                                         (static_cast<float>(windowWidth) - static_cast<float>(w)) * 0.5f,
+                                         (static_cast<float>(windowHeight) - static_cast<float>(h)) * 0.5f, msgTint);
+        } else {
+            renderer.measureText(font, msg, w, h);
+            renderer.drawText(font, msg, (static_cast<float>(windowWidth) - static_cast<float>(w)) * 0.5f,
+                               (static_cast<float>(windowHeight) - static_cast<float>(h)) * 0.5f, msgTint);
+        }
     }
 
     const float scaleX = static_cast<float>(windowWidth) / static_cast<float>(kReferenceWidth);
@@ -183,13 +191,23 @@ void VRRoomScreen::render(UIRenderer& renderer, Font& font, int windowWidth, int
     }
 
     const std::string hint = "Click a highlighted area to move - ESC to exit";
+    const Color hintTint{0.9f, 0.9f, 0.9f, 1.0f};
     int hintW = 0, hintH = 0;
-    renderer.measureText(font, hint, hintW, hintH);
+    if (m_assets && m_assets->loaded) {
+        m_assets->renderer.measureText(m_assets->font, hint, hintW, hintH);
+    } else {
+        renderer.measureText(font, hint, hintW, hintH);
+    }
     renderer.drawRect(0, static_cast<float>(windowHeight) - static_cast<float>(hintH) - 16.0f,
                        static_cast<float>(windowWidth), static_cast<float>(hintH) + 16.0f, Color{0, 0, 0, 0.5f});
-    renderer.drawText(font, hint, (static_cast<float>(windowWidth) - static_cast<float>(hintW)) * 0.5f,
-                       static_cast<float>(windowHeight) - static_cast<float>(hintH) - 8.0f,
-                       Color{0.9f, 0.9f, 0.9f, 1.0f});
+    if (m_assets && m_assets->loaded) {
+        m_assets->renderer.drawText(renderer, m_assets->font, m_assets->palette, hint,
+                                     (static_cast<float>(windowWidth) - static_cast<float>(hintW)) * 0.5f,
+                                     static_cast<float>(windowHeight) - static_cast<float>(hintH) - 8.0f, hintTint);
+    } else {
+        renderer.drawText(font, hint, (static_cast<float>(windowWidth) - static_cast<float>(hintW)) * 0.5f,
+                           static_cast<float>(windowHeight) - static_cast<float>(hintH) - 8.0f, hintTint);
+    }
 }
 
 } // namespace neoslancer

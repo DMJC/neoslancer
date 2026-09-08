@@ -17,8 +17,9 @@ std::string toLower(std::string s) {
 }
 } // namespace
 
-IntroScreen::IntroScreen(std::string dataRoot)
+IntroScreen::IntroScreen(std::string dataRoot, const MenuAssets* assets)
     : m_dataRoot(std::move(dataRoot)),
+      m_assets(assets),
       m_movieNames{"NEW_NMS.BIK", "NEW_DALOGO_FS_UNCMPR.BIK", "WARTY_.BIK", "SPLASH TO MM.BIK"} {}
 
 void IntroScreen::onEnter(MenuManager& manager) {
@@ -94,11 +95,18 @@ void IntroScreen::render(UIRenderer& renderer, Font& font, int windowWidth, int 
     }
 
     const std::string hint = "Click, Space, or Enter to skip - ESC to skip intro";
+    const Color hintTint{0.7f, 0.7f, 0.7f, 0.8f};
     int hintW = 0, hintH = 0;
-    renderer.measureText(font, hint, hintW, hintH);
-    renderer.drawText(font, hint, (static_cast<float>(windowWidth) - static_cast<float>(hintW)) * 0.5f,
-                       static_cast<float>(windowHeight) - static_cast<float>(hintH) - 16.0f,
-                       Color{0.7f, 0.7f, 0.7f, 0.8f});
+    if (m_assets && m_assets->loaded) {
+        m_assets->renderer.measureText(m_assets->font, hint, hintW, hintH);
+        m_assets->renderer.drawText(renderer, m_assets->font, m_assets->palette, hint,
+                                     (static_cast<float>(windowWidth) - static_cast<float>(hintW)) * 0.5f,
+                                     static_cast<float>(windowHeight) - static_cast<float>(hintH) - 16.0f, hintTint);
+    } else {
+        renderer.measureText(font, hint, hintW, hintH);
+        renderer.drawText(font, hint, (static_cast<float>(windowWidth) - static_cast<float>(hintW)) * 0.5f,
+                           static_cast<float>(windowHeight) - static_cast<float>(hintH) - 16.0f, hintTint);
+    }
 }
 
 } // namespace neoslancer

@@ -4,8 +4,12 @@
 
 namespace neoslancer {
 
-PlaceholderScreen::PlaceholderScreen(std::string title, std::string description, int backScreenId)
-    : m_titleText(std::move(title)), m_descriptionText(std::move(description)), m_backScreenId(backScreenId) {}
+PlaceholderScreen::PlaceholderScreen(std::string title, std::string description, int backScreenId,
+                                      const MenuAssets* assets)
+    : SimpleMenuScreen(assets),
+      m_titleText(std::move(title)),
+      m_descriptionText(std::move(description)),
+      m_backScreenId(backScreenId) {}
 
 void PlaceholderScreen::onEnter(MenuManager& manager) {
     setTitle(m_titleText);

@@ -5,8 +5,6 @@
 
 namespace neoslancer {
 
-MainMenuScreen::MainMenuScreen(std::string dataRoot) : m_dataRoot(std::move(dataRoot)) {}
-
 void MainMenuScreen::onEnter(MenuManager& manager) {
     m_buttons.setButtons({
         {"NEW GAME", [&manager]() { manager.goTo(MenuScreenId::NewGameSetup); }},
@@ -18,18 +16,6 @@ void MainMenuScreen::onEnter(MenuManager& manager) {
         {"SHIP INTERIOR (DEMO)", [&manager]() { manager.goTo(MenuScreenId::MissionBriefing); }},
         {"QUIT", [&manager]() { manager.requestQuitApplication(); }},
     });
-
-    if (!m_loadAttempted) {
-        m_loadAttempted = true;
-        if (m_archive.open(m_dataRoot + "/RESOURCE.HOG")) {
-            const std::vector<uint8_t> fontData = m_archive.read("handel.fnt");
-            const std::vector<uint8_t> paletteData = m_archive.read("palette.ccb");
-            const std::vector<uint8_t> spriteData = m_archive.read("FRONTEND.SPR");
-            m_assetsLoaded = !fontData.empty() && !paletteData.empty() && !spriteData.empty() &&
-                              parseWinVfxFont(fontData, m_font) && parseWinVfxPalette(paletteData, m_palette) &&
-                              parseWinVfxSprite(spriteData, m_sprite);
-        }
-    }
 }
 
 void MainMenuScreen::handleEvent(const SDL_Event& event, MenuManager& manager) {
@@ -41,7 +27,7 @@ void MainMenuScreen::handleEvent(const SDL_Event& event, MenuManager& manager) {
 }
 
 void MainMenuScreen::render(UIRenderer& renderer, Font& font, int windowWidth, int windowHeight) {
-    if (m_assetsLoaded) {
+    if (m_assets && m_assets->loaded) {
         renderWithWinVfx(renderer, windowWidth, windowHeight);
     } else {
         renderFallback(renderer, font, windowWidth, windowHeight);
@@ -70,25 +56,21 @@ void MainMenuScreen::renderWithWinVfx(UIRenderer& renderer, int windowWidth, int
     renderer.drawRect(0, 0, static_cast<float>(windowWidth), static_cast<float>(windowHeight),
                        Color{0.02f, 0.03f, 0.08f, 1.0f});
 
+    WinVfxRenderer& vfx = m_assets->renderer;
     const Color titleTint{0.80f, 0.88f, 1.0f, 1.0f};
     const std::string title = "STARLANCER";
     int titleW = 0, titleH = 0;
-    m_winVfxRenderer.measureText(m_font, title, titleW, titleH);
+    vfx.measureText(m_assets->font, title, titleW, titleH);
     const float titleX = (static_cast<float>(windowWidth) - static_cast<float>(titleW)) * 0.5f;
     const float titleY = static_cast<float>(windowHeight) * 0.16f;
-    m_winVfxRenderer.drawText(renderer, m_font, m_palette, title, titleX, titleY, titleTint);
+    vfx.drawText(renderer, m_assets->font, m_assets->palette, title, titleX, titleY, titleTint);
 
     // A real decoded FRONTEND.SPR shape (one of a set of 16 identically-
     // sized 30x31 icons) as a decorative accent beside the title - real
     // asset, our own placement (see class doc comment).
-    int iconW = 0, iconH = 0;
-    if (m_winVfxRenderer.shapeSize(m_sprite, 1, iconW, iconH)) {
-        m_winVfxRenderer.drawShape(renderer, m_sprite, 1, m_palette,
-                                    titleX - static_cast<float>(iconW) - 16.0f,
-                                    titleY + (static_cast<float>(titleH) - static_cast<float>(iconH)) * 0.5f);
-        m_winVfxRenderer.drawShape(renderer, m_sprite, 1, m_palette,
-                                    titleX + static_cast<float>(titleW) + 16.0f,
-                                    titleY + (static_cast<float>(titleH) - static_cast<float>(iconH)) * 0.5f);
+    if (m_assets->spriteLoaded) {
+        vfx.drawTitleAccents(renderer, m_assets->sprite, 1, m_assets->palette, titleX, titleY,
+                             static_cast<float>(titleW), static_cast<float>(titleH));
     }
 
     const float buttonWidth = 340.0f;
@@ -109,10 +91,10 @@ void MainMenuScreen::renderWithWinVfx(UIRenderer& renderer, int windowWidth, int
                            static_cast<int>(i) == m_buttons.selectedIndex() ? selectedBg : normalBg);
 
         int labelW = 0, labelH = 0;
-        m_winVfxRenderer.measureText(m_font, buttons[i].label, labelW, labelH);
+        vfx.measureText(m_assets->font, buttons[i].label, labelW, labelH);
         const float textX = r.x + (r.w - static_cast<float>(labelW)) * 0.5f;
         const float textY = r.y + (r.h - static_cast<float>(labelH)) * 0.5f;
-        m_winVfxRenderer.drawText(renderer, m_font, m_palette, buttons[i].label, textX, textY, textTint);
+        vfx.drawText(renderer, m_assets->font, m_assets->palette, buttons[i].label, textX, textY, textTint);
     }
 }
 

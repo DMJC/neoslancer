@@ -1,5 +1,6 @@
 #pragma once
 
+#include "neoslancer/menu/MenuAssets.h"
 #include "neoslancer/menu/MenuScreen.h"
 #include "neoslancer/video/BinkVideoPlayer.h"
 
@@ -22,7 +23,7 @@ namespace neoslancer {
 // current clip, matching the usual "skip intro" convention.
 class IntroScreen : public MenuScreen {
 public:
-    explicit IntroScreen(std::string dataRoot);
+    IntroScreen(std::string dataRoot, const MenuAssets* assets);
 
     void onEnter(MenuManager& manager) override;
     void handleEvent(const SDL_Event& event, MenuManager& manager) override;
@@ -34,6 +35,7 @@ private:
     void advance(MenuManager& manager);
 
     std::string m_dataRoot;
+    const MenuAssets* m_assets;
     std::vector<std::string> m_movieNames;
     size_t m_index = 0;
     BinkVideoPlayer m_video;

@@ -1,14 +1,8 @@
 #pragma once
 
-#include "neoslancer/BigFile.h"
-#include "neoslancer/WinVfxFont.h"
-#include "neoslancer/WinVfxPalette.h"
-#include "neoslancer/WinVfxSprite.h"
-#include "neoslancer/gfx/WinVfxRenderer.h"
 #include "neoslancer/menu/ButtonList.h"
+#include "neoslancer/menu/MenuAssets.h"
 #include "neoslancer/menu/MenuScreen.h"
-
-#include <string>
 
 namespace neoslancer {
 
@@ -20,19 +14,18 @@ namespace neoslancer {
 // title screen quits via window-close, and separately hides a mission-
 // select cheat code this port doesn't attempt to reproduce).
 //
-// Renders with the real WinVFX assets when they can be loaded from
-// RESOURCE.HOG: starlancer's own handel.fnt bitmap font for all text, a
-// real decoded FRONTEND.SPR shape as a decorative accent, and the real
-// palette.ccb master palette to colorize it (see WinVfxRenderer.h for
-// how - none of this was proven to be the ORIGINAL title screen's own
-// asset choices/layout, since that widget-position data was never
-// decompiled; these are real assets used in a layout of our own). Falls
-// back to the SDL_ttf placeholder rendering used elsewhere in menu/ if
-// the archive or any of these three resources can't be loaded, so the
-// menu still works without a full game-data install.
+// Renders with the shared WinVFX assets (see MenuAssets.h) when they
+// loaded: starlancer's own handel.fnt bitmap font for all text, plus a
+// real decoded FRONTEND.SPR shape as a decorative accent, colorized with
+// the shared palette.ccb (see WinVfxRenderer.h for how - none of this
+// was proven to be the ORIGINAL title screen's own asset choices/layout,
+// since that widget-position data was never decompiled; these are real
+// assets used in a layout of our own). Falls back to the SDL_ttf
+// placeholder rendering used elsewhere in menu/ if assets aren't loaded,
+// so the menu still works without a full game-data install.
 class MainMenuScreen : public MenuScreen {
 public:
-    explicit MainMenuScreen(std::string dataRoot);
+    explicit MainMenuScreen(const MenuAssets* assets) : m_assets(assets) {}
 
     void onEnter(MenuManager& manager) override;
     void handleEvent(const SDL_Event& event, MenuManager& manager) override;
@@ -42,16 +35,8 @@ private:
     void renderWithWinVfx(UIRenderer& renderer, int windowWidth, int windowHeight);
     void renderFallback(UIRenderer& renderer, Font& font, int windowWidth, int windowHeight);
 
-    std::string m_dataRoot;
+    const MenuAssets* m_assets;
     ButtonList m_buttons;
-
-    bool m_assetsLoaded = false;
-    bool m_loadAttempted = false;
-    BigFileArchive m_archive;
-    WinVfxFont m_font;
-    WinVfxPalette m_palette;
-    WinVfxSprite m_sprite;
-    WinVfxRenderer m_winVfxRenderer;
 };
 
 } // namespace neoslancer

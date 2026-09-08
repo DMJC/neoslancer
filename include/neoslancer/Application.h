@@ -3,6 +3,7 @@
 #include "neoslancer/Window.h"
 #include "neoslancer/gfx/Font.h"
 #include "neoslancer/gfx/UIRenderer.h"
+#include "neoslancer/menu/MenuAssets.h"
 #include "neoslancer/menu/MenuManager.h"
 
 #include <memory>
@@ -35,6 +36,11 @@ private:
     Window m_window;
     UIRenderer m_uiRenderer;
     Font m_font;
+    // Declared before m_menuManager (and destroyed after it - C++ member
+    // teardown is reverse-declaration-order) since every menu screen
+    // holds a raw MenuAssets* into this that must stay valid for the
+    // screen's own lifetime.
+    MenuAssets m_menuAssets;
     std::unique_ptr<MenuManager> m_menuManager;
 
     bool m_running = false;

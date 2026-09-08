@@ -49,6 +49,14 @@ public:
                    float x, float y, Color tint = {1.0f, 1.0f, 1.0f, 1.0f});
     bool shapeSize(const WinVfxSprite& sprite, size_t shapeIndex, int& outWidth, int& outHeight) const;
 
+    // Draws shapeIndex flanking a title's left/right edges, vertically
+    // centered against it - the repeated "accent icon beside the title"
+    // decoration used by every real-asset menu screen. No-op if the shape
+    // can't be sized (e.g. sprite not loaded).
+    void drawTitleAccents(UIRenderer& renderer, const WinVfxSprite& sprite, size_t shapeIndex,
+                          const WinVfxPalette& palette, float titleX, float titleY, float titleW, float titleH,
+                          float gap = 16.0f);
+
 private:
     struct GlTexture {
         GLuint texture = 0;

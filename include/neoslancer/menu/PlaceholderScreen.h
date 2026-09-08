@@ -11,7 +11,7 @@ namespace neoslancer {
 // button to backScreenId.
 class PlaceholderScreen : public SimpleMenuScreen {
 public:
-    PlaceholderScreen(std::string title, std::string description, int backScreenId);
+    PlaceholderScreen(std::string title, std::string description, int backScreenId, const MenuAssets* assets);
 
     void onEnter(MenuManager& manager) override;
 

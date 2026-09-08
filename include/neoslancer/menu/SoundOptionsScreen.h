@@ -2,6 +2,7 @@
 
 #include "neoslancer/GameConfig.h"
 #include "neoslancer/menu/AdjustableList.h"
+#include "neoslancer/menu/MenuAssets.h"
 #include "neoslancer/menu/MenuScreen.h"
 
 #include <string>
@@ -18,7 +19,7 @@ namespace neoslancer {
 // reasonable inference, not something the docs state explicitly.
 class SoundOptionsScreen : public MenuScreen {
 public:
-    explicit SoundOptionsScreen(std::string iniPath);
+    SoundOptionsScreen(std::string iniPath, const MenuAssets* assets);
 
     void onEnter(MenuManager& manager) override;
     void handleEvent(const SDL_Event& event, MenuManager& manager) override;
@@ -27,8 +28,11 @@ public:
 private:
     void save();
     void rebuildRows();
+    void renderWithWinVfx(UIRenderer& renderer, int windowWidth, int windowHeight);
+    void renderFallback(UIRenderer& renderer, Font& font, int windowWidth, int windowHeight);
 
     std::string m_iniPath;
+    const MenuAssets* m_assets;
     SoundConfig m_config;
     AdjustableList m_rows;
 };

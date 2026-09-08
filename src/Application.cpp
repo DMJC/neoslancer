@@ -21,45 +21,46 @@ namespace neoslancer {
 
 namespace {
 
-void registerMenuScreens(MenuManager& manager, const std::string& iniPath, const std::string& dataRoot) {
+void registerMenuScreens(MenuManager& manager, const std::string& iniPath, const std::string& dataRoot,
+                          const MenuAssets& assets) {
     using namespace MenuScreenId;
 
-    manager.registerScreen(Intro, std::make_unique<IntroScreen>(dataRoot));
-    manager.registerScreen(MainMenu, std::make_unique<MainMenuScreen>(dataRoot));
-    manager.registerScreen(OptionsMenu, std::make_unique<OptionsMenuScreen>());
-    manager.registerScreen(SoundOptions, std::make_unique<SoundOptionsScreen>(iniPath));
-    manager.registerScreen(VideoOptions, std::make_unique<VideoOptionsScreen>(iniPath));
-    manager.registerScreen(ControlsOptions, std::make_unique<ControlsOptionsScreen>(iniPath));
-    manager.registerScreen(NetworkDisconnect, std::make_unique<NetworkDisconnectScreen>());
+    manager.registerScreen(Intro, std::make_unique<IntroScreen>(dataRoot, &assets));
+    manager.registerScreen(MainMenu, std::make_unique<MainMenuScreen>(&assets));
+    manager.registerScreen(OptionsMenu, std::make_unique<OptionsMenuScreen>(&assets));
+    manager.registerScreen(SoundOptions, std::make_unique<SoundOptionsScreen>(iniPath, &assets));
+    manager.registerScreen(VideoOptions, std::make_unique<VideoOptionsScreen>(iniPath, &assets));
+    manager.registerScreen(ControlsOptions, std::make_unique<ControlsOptionsScreen>(iniPath, &assets));
+    manager.registerScreen(NetworkDisconnect, std::make_unique<NetworkDisconnectScreen>(&assets));
 
     // RunMissionBriefingScreen itself (the briefing movie + speech-tag
     // selection) isn't ported - but it's the only confirmed real path
     // into RunShipInteriorVRLoop, so screen ID 7 goes straight to the
     // real VR loop instead, always starting at the late-campaign entry
     // node (see VRRoomScreen.h for exactly what is/isn't ported there).
-    manager.registerScreen(MissionBriefing, std::make_unique<VRRoomScreen>(dataRoot));
+    manager.registerScreen(MissionBriefing, std::make_unique<VRRoomScreen>(dataRoot, &assets));
 
     // Real RunMenuScreenLoop handlers this port hasn't built real behavior
     // for yet (confidence_db.md has what each one actually does).
     manager.registerScreen(NewGameSetup,
                             std::make_unique<PlaceholderScreen>(
-                                "NEW GAME", "Campaign/pilot setup", MainMenu));
-    manager.registerScreen(SaveGame,
-                            std::make_unique<PlaceholderScreen>("SAVE GAME", "Save-slot browser", OptionsMenu));
-    manager.registerScreen(LoadGame,
-                            std::make_unique<PlaceholderScreen>("LOAD GAME", "Save-slot browser", OptionsMenu));
+                                "NEW GAME", "Campaign/pilot setup", MainMenu, &assets));
+    manager.registerScreen(
+        SaveGame, std::make_unique<PlaceholderScreen>("SAVE GAME", "Save-slot browser", OptionsMenu, &assets));
+    manager.registerScreen(
+        LoadGame, std::make_unique<PlaceholderScreen>("LOAD GAME", "Save-slot browser", OptionsMenu, &assets));
     manager.registerScreen(SaveGameBrowser,
                             std::make_unique<PlaceholderScreen>(
-                                "SAVE GAME BROWSER", "Save-file scanner", MainMenu));
+                                "SAVE GAME BROWSER", "Save-file scanner", MainMenu, &assets));
     manager.registerScreen(MultiplayerSetup,
                             std::make_unique<PlaceholderScreen>(
-                                "MULTIPLAYER", "Direct/Zone.com/Host/Join connection setup", MainMenu));
+                                "MULTIPLAYER", "Direct/Zone.com/Host/Join connection setup", MainMenu, &assets));
     manager.registerScreen(MultiplayerLobbyHost,
                             std::make_unique<PlaceholderScreen>(
-                                "HOST GAME", "Multiplayer lobby (host)", MultiplayerSetup));
+                                "HOST GAME", "Multiplayer lobby (host)", MultiplayerSetup, &assets));
     manager.registerScreen(MultiplayerLobbyJoin,
                             std::make_unique<PlaceholderScreen>(
-                                "JOIN GAME", "Multiplayer lobby (join)", MultiplayerSetup));
+                                "JOIN GAME", "Multiplayer lobby (join)", MultiplayerSetup, &assets));
 
     manager.goTo(Intro);
 }
@@ -106,8 +107,10 @@ bool Application::init(const WindowConfig& config, const std::string& iniPath, c
     }
     m_uiRenderer.resize(m_window.width(), m_window.height());
 
+    loadMenuAssets(dataRoot, m_menuAssets); // non-fatal if it fails - screens fall back to SDL_ttf
+
     m_menuManager = std::make_unique<MenuManager>(m_uiRenderer, m_font);
-    registerMenuScreens(*m_menuManager, iniPath, dataRoot);
+    registerMenuScreens(*m_menuManager, iniPath, dataRoot, m_menuAssets);
 
     m_initialized = true;
     return true;
@@ -176,6 +179,7 @@ void Application::shutdown() {
         return;
     }
     m_menuManager.reset();
+    m_menuAssets.renderer.shutdown(); // must run before the GL context is destroyed below
     m_uiRenderer.shutdown();
     m_font.close();
     TTF_Quit();

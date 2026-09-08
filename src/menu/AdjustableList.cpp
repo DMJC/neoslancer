@@ -43,7 +43,7 @@ void AdjustableList::handleEvent(const SDL_Event& event) {
         }
     } else if (event.type == SDL_MOUSEMOTION) {
         for (size_t i = 0; i < m_lastRects.size(); ++i) {
-            const LaidOutRect& r = m_lastRects[i];
+            const Rect& r = m_lastRects[i];
             if (event.motion.x >= r.x && event.motion.x < r.x + r.w && event.motion.y >= r.y &&
                 event.motion.y < r.y + r.h) {
                 m_selected = static_cast<int>(i);
@@ -52,7 +52,7 @@ void AdjustableList::handleEvent(const SDL_Event& event) {
         }
     } else if (event.type == SDL_MOUSEBUTTONDOWN && event.button.button == SDL_BUTTON_LEFT) {
         for (size_t i = 0; i < m_lastRects.size(); ++i) {
-            const LaidOutRect& r = m_lastRects[i];
+            const Rect& r = m_lastRects[i];
             if (event.button.x >= r.x && event.button.x < r.x + r.w && event.button.y >= r.y &&
                 event.button.y < r.y + r.h) {
                 m_selected = static_cast<int>(i);
@@ -64,10 +64,18 @@ void AdjustableList::handleEvent(const SDL_Event& event) {
     }
 }
 
-void AdjustableList::render(UIRenderer& renderer, Font& font, float x, float y, float width, float itemHeight,
-                             float gap) {
+void AdjustableList::layout(float x, float y, float width, float itemHeight, float gap) {
     m_lastRects.clear();
     m_lastRects.reserve(m_rows.size());
+    for (size_t i = 0; i < m_rows.size(); ++i) {
+        const float itemY = y + static_cast<float>(i) * (itemHeight + gap);
+        m_lastRects.push_back({x, itemY, width, itemHeight});
+    }
+}
+
+void AdjustableList::render(UIRenderer& renderer, Font& font, float x, float y, float width, float itemHeight,
+                             float gap) {
+    layout(x, y, width, itemHeight, gap);
 
     const Color normalBg{0.10f, 0.12f, 0.20f, 0.85f};
     const Color selectedBg{0.20f, 0.35f, 0.55f, 0.95f};
@@ -75,24 +83,20 @@ void AdjustableList::render(UIRenderer& renderer, Font& font, float x, float y, 
     const Color valueColor{0.6f, 0.9f, 0.7f, 1.0f};
 
     for (size_t i = 0; i < m_rows.size(); ++i) {
-        const float itemY = y + static_cast<float>(i) * (itemHeight + gap);
-        renderer.drawRect(x, itemY, width, itemHeight,
-                           static_cast<int>(i) == m_selected ? selectedBg : normalBg);
+        const Rect& r = m_lastRects[i];
+        renderer.drawRect(r.x, r.y, r.w, r.h, static_cast<int>(i) == m_selected ? selectedBg : normalBg);
 
         const std::string& label = m_rows[i].label;
         const std::string value = m_rows[i].displayValue ? m_rows[i].displayValue() : "";
 
         int labelH = 0, labelW = 0;
         renderer.measureText(font, label, labelW, labelH);
-        renderer.drawText(font, label, x + 16.0f, itemY + (itemHeight - static_cast<float>(labelH)) * 0.5f,
-                           labelColor);
+        renderer.drawText(font, label, r.x + 16.0f, r.y + (r.h - static_cast<float>(labelH)) * 0.5f, labelColor);
 
         int valueW = 0, valueH = 0;
         renderer.measureText(font, value, valueW, valueH);
-        renderer.drawText(font, value, x + width - static_cast<float>(valueW) - 16.0f,
-                           itemY + (itemHeight - static_cast<float>(valueH)) * 0.5f, valueColor);
-
-        m_lastRects.push_back({x, itemY, width, itemHeight});
+        renderer.drawText(font, value, r.x + r.w - static_cast<float>(valueW) - 16.0f,
+                           r.y + (r.h - static_cast<float>(valueH)) * 0.5f, valueColor);
     }
 }
 

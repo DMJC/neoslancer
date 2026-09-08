@@ -154,6 +154,18 @@ void WinVfxRenderer::drawShape(UIRenderer& renderer, const WinVfxSprite& sprite,
     renderer.drawTexture(tex->texture, x, y, static_cast<float>(tex->width), static_cast<float>(tex->height), tint);
 }
 
+void WinVfxRenderer::drawTitleAccents(UIRenderer& renderer, const WinVfxSprite& sprite, size_t shapeIndex,
+                                       const WinVfxPalette& palette, float titleX, float titleY, float titleW,
+                                       float titleH, float gap) {
+    int iconW = 0, iconH = 0;
+    if (!shapeSize(sprite, shapeIndex, iconW, iconH)) {
+        return;
+    }
+    const float iconY = titleY + (titleH - static_cast<float>(iconH)) * 0.5f;
+    drawShape(renderer, sprite, shapeIndex, palette, titleX - static_cast<float>(iconW) - gap, iconY);
+    drawShape(renderer, sprite, shapeIndex, palette, titleX + titleW + gap, iconY);
+}
+
 bool WinVfxRenderer::shapeSize(const WinVfxSprite& sprite, size_t shapeIndex, int& outWidth, int& outHeight) const {
     if (shapeIndex >= sprite.shapes.size()) {
         return false;

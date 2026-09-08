@@ -1,5 +1,6 @@
 #pragma once
 
+#include "neoslancer/menu/MenuAssets.h"
 #include "neoslancer/menu/MenuScreen.h"
 
 namespace neoslancer {
@@ -12,12 +13,15 @@ namespace neoslancer {
 // behavior itself is genuinely reproduced).
 class NetworkDisconnectScreen : public MenuScreen {
 public:
+    explicit NetworkDisconnectScreen(const MenuAssets* assets) : m_assets(assets) {}
+
     void onEnter(MenuManager& manager) override;
     void handleEvent(const SDL_Event& event, MenuManager& manager) override;
     bool update(float deltaSeconds, MenuManager& manager) override;
     void render(UIRenderer& renderer, Font& font, int windowWidth, int windowHeight) override;
 
 private:
+    const MenuAssets* m_assets;
     float m_elapsedSeconds = 0.0f;
 };
 

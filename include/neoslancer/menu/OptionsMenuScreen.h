@@ -9,6 +9,8 @@ namespace neoslancer {
 // (screen 0)" is a direct decompile fact (confidence_db.md).
 class OptionsMenuScreen : public SimpleMenuScreen {
 public:
+    explicit OptionsMenuScreen(const MenuAssets* assets) : SimpleMenuScreen(assets) {}
+
     void onEnter(MenuManager& manager) override;
 };
 

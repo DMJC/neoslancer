@@ -2,6 +2,7 @@
 
 #include "neoslancer/GameConfig.h"
 #include "neoslancer/menu/AdjustableList.h"
+#include "neoslancer/menu/MenuAssets.h"
 #include "neoslancer/menu/MenuScreen.h"
 
 #include <string>
@@ -19,7 +20,7 @@ namespace neoslancer {
 // Back-target (-> Options hub, screen 1) is our own inference.
 class ControlsOptionsScreen : public MenuScreen {
 public:
-    explicit ControlsOptionsScreen(std::string iniPath);
+    ControlsOptionsScreen(std::string iniPath, const MenuAssets* assets);
 
     void onEnter(MenuManager& manager) override;
     void handleEvent(const SDL_Event& event, MenuManager& manager) override;
@@ -28,8 +29,11 @@ public:
 private:
     void save();
     void rebuildRows();
+    void renderWithWinVfx(UIRenderer& renderer, int windowWidth, int windowHeight);
+    void renderFallback(UIRenderer& renderer, Font& font, int windowWidth, int windowHeight);
 
     std::string m_iniPath;
+    const MenuAssets* m_assets;
     KeyConfigFlags m_flags;
     AdjustableList m_rows;
 };

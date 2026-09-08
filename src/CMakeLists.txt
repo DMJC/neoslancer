@@ -29,6 +29,7 @@ add_executable(neoslancer
     gfx/UIRenderer.cpp
     gfx/WinVfxRenderer.cpp
     menu/MenuManager.cpp
+    menu/MenuAssets.cpp
     menu/ButtonList.cpp
     menu/AdjustableList.cpp
     menu/SimpleMenuScreen.cpp

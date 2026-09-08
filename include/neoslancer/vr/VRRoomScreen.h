@@ -1,5 +1,6 @@
 #pragma once
 
+#include "neoslancer/menu/MenuAssets.h"
 #include "neoslancer/menu/MenuScreen.h"
 #include "neoslancer/video/BinkVideoPlayer.h"
 #include "neoslancer/vr/VRRoomGraph.h"
@@ -31,7 +32,7 @@ namespace neoslancer {
 // selection this port doesn't have a "current mission index" for yet.
 class VRRoomScreen : public MenuScreen {
 public:
-    explicit VRRoomScreen(std::string dataRoot);
+    VRRoomScreen(std::string dataRoot, const MenuAssets* assets);
 
     void onEnter(MenuManager& manager) override;
     void handleEvent(const SDL_Event& event, MenuManager& manager) override;
@@ -49,6 +50,7 @@ private:
     std::vector<HotspotRect> currentHotspots() const;
 
     std::string m_dataRoot;
+    const MenuAssets* m_assets;
     uint32_t m_currentAddress = 0;
     bool m_lateCampaign = true;
     BinkVideoPlayer m_video;

@@ -24,17 +24,27 @@ struct AdjustableRow {
 // reasonable range choices.
 class AdjustableList {
 public:
+    struct Rect {
+        float x, y, w, h;
+    };
+
     void setRows(std::vector<AdjustableRow> rows);
     void handleEvent(const SDL_Event& event);
     void render(UIRenderer& renderer, Font& font, float x, float y, float width, float itemHeight, float gap);
 
-private:
-    struct LaidOutRect {
-        float x, y, w, h;
-    };
+    // Computes and stores the hit-test rects without drawing - for
+    // screens that want AdjustableList's input handling/layout but draw
+    // the rows themselves (e.g. with real WinVFX fonts). render() calls
+    // this internally.
+    void layout(float x, float y, float width, float itemHeight, float gap);
 
+    const std::vector<Rect>& rects() const { return m_lastRects; }
+    const std::vector<AdjustableRow>& rows() const { return m_rows; }
+    int selectedIndex() const { return m_selected; }
+
+private:
     std::vector<AdjustableRow> m_rows;
-    std::vector<LaidOutRect> m_lastRects;
+    std::vector<Rect> m_lastRects;
     int m_selected = 0;
 
     void adjustSelected(int direction);

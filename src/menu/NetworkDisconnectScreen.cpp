@@ -28,11 +28,18 @@ void NetworkDisconnectScreen::render(UIRenderer& renderer, Font& font, int windo
                        Color{0.02f, 0.03f, 0.08f, 1.0f});
 
     const std::string text = "Disconnecting...";
+    const Color tint{0.8f, 0.85f, 0.9f, 1.0f};
     int w = 0, h = 0;
-    renderer.measureText(font, text, w, h);
-    renderer.drawText(font, text, (static_cast<float>(windowWidth) - static_cast<float>(w)) * 0.5f,
-                       (static_cast<float>(windowHeight) - static_cast<float>(h)) * 0.5f,
-                       Color{0.8f, 0.85f, 0.9f, 1.0f});
+    if (m_assets && m_assets->loaded) {
+        m_assets->renderer.measureText(m_assets->font, text, w, h);
+        m_assets->renderer.drawText(renderer, m_assets->font, m_assets->palette, text,
+                                     (static_cast<float>(windowWidth) - static_cast<float>(w)) * 0.5f,
+                                     (static_cast<float>(windowHeight) - static_cast<float>(h)) * 0.5f, tint);
+    } else {
+        renderer.measureText(font, text, w, h);
+        renderer.drawText(font, text, (static_cast<float>(windowWidth) - static_cast<float>(w)) * 0.5f,
+                           (static_cast<float>(windowHeight) - static_cast<float>(h)) * 0.5f, tint);
+    }
 }
 
 } // namespace neoslancer
