@@ -28,4 +28,84 @@ DeviceConfig loadDeviceConfig(const std::string& iniPath) {
     return config;
 }
 
+void saveDeviceConfig(const std::string& iniPath, const DeviceConfig& config) {
+    IniFile ini;
+    ini.load(iniPath); // ok if this fails - we'll just create a fresh file
+
+    ini.setString("Device", "renderdevice0", config.renderDevice0);
+    ini.setString("Device", "renderdevice1", config.renderDevice1);
+    ini.setInt("Device", "Device", config.device);
+    ini.setInt("Device", "Xres", config.xres);
+    ini.setInt("Device", "Yres", config.yres);
+    ini.setInt("Device", "Windowed", config.windowed ? 1 : 0);
+    ini.setInt("Device", "Tdetail", config.textureDetail);
+    ini.setInt("Device", "Gdetail", config.geometryDetail);
+    ini.setInt("Device", "Lmaps", config.lightmaps ? 1 : 0);
+    ini.setInt("Device", "View", config.view);
+    ini.setInt("Device", "Transitions", config.transitions ? 1 : 0);
+    ini.setInt("Device", "gamma", config.gamma);
+
+    ini.save(iniPath);
+}
+
+SoundConfig loadSoundConfig(const std::string& iniPath) {
+    SoundConfig config;
+
+    IniFile ini;
+    if (!ini.load(iniPath)) {
+        return config;
+    }
+
+    config.provider3D = ini.getString("Sound", "3DProvider", config.provider3D);
+    config.fxVolume = ini.getInt("Sound", "Fxvolume", config.fxVolume);
+    config.musicVolume = ini.getInt("Sound", "Musicvolume", config.musicVolume);
+    config.speechVolume = ini.getInt("Sound", "Speechvolume", config.speechVolume);
+    config.masterVolume = ini.getInt("Sound", "Mastervolume", config.masterVolume);
+
+    return config;
+}
+
+void saveSoundConfig(const std::string& iniPath, const SoundConfig& config) {
+    IniFile ini;
+    ini.load(iniPath);
+
+    ini.setString("Sound", "3DProvider", config.provider3D);
+    ini.setInt("Sound", "Fxvolume", config.fxVolume);
+    ini.setInt("Sound", "Musicvolume", config.musicVolume);
+    ini.setInt("Sound", "Speechvolume", config.speechVolume);
+    ini.setInt("Sound", "Mastervolume", config.masterVolume);
+
+    ini.save(iniPath);
+}
+
+KeyConfigFlags loadKeyConfigFlags(const std::string& iniPath) {
+    KeyConfigFlags flags;
+
+    IniFile ini;
+    if (!ini.load(iniPath)) {
+        return flags;
+    }
+
+    flags.forceFeedback = ini.getInt("KeyConfig", "ForceFeedback", flags.forceFeedback ? 1 : 0) != 0;
+    flags.joystickInvert = ini.getInt("KeyConfig", "JoystickInvert", flags.joystickInvert ? 1 : 0) != 0;
+    flags.hatEnable = ini.getInt("KeyConfig", "HatEnable", flags.hatEnable ? 1 : 0) != 0;
+    flags.twistEnable = ini.getInt("KeyConfig", "TwistEnable", flags.twistEnable ? 1 : 0) != 0;
+    flags.controller = ini.getInt("KeyConfig", "Controller", flags.controller);
+
+    return flags;
+}
+
+void saveKeyConfigFlags(const std::string& iniPath, const KeyConfigFlags& flags) {
+    IniFile ini;
+    ini.load(iniPath);
+
+    ini.setInt("KeyConfig", "ForceFeedback", flags.forceFeedback ? 1 : 0);
+    ini.setInt("KeyConfig", "JoystickInvert", flags.joystickInvert ? 1 : 0);
+    ini.setInt("KeyConfig", "HatEnable", flags.hatEnable ? 1 : 0);
+    ini.setInt("KeyConfig", "TwistEnable", flags.twistEnable ? 1 : 0);
+    ini.setInt("KeyConfig", "Controller", flags.controller);
+
+    ini.save(iniPath);
+}
+
 } // namespace neoslancer

@@ -20,6 +20,20 @@ add_executable(neoslancer
     main.cpp
     Application.cpp
     Window.cpp
+    gfx/Shader.cpp
+    gfx/Font.cpp
+    gfx/UIRenderer.cpp
+    menu/MenuManager.cpp
+    menu/ButtonList.cpp
+    menu/AdjustableList.cpp
+    menu/SimpleMenuScreen.cpp
+    menu/MainMenuScreen.cpp
+    menu/OptionsMenuScreen.cpp
+    menu/PlaceholderScreen.cpp
+    menu/SoundOptionsScreen.cpp
+    menu/VideoOptionsScreen.cpp
+    menu/ControlsOptionsScreen.cpp
+    menu/NetworkDisconnectScreen.cpp
 )
 
 target_include_directories(neoslancer PRIVATE
@@ -29,6 +43,7 @@ target_include_directories(neoslancer PRIVATE
 target_link_libraries(neoslancer PRIVATE
     neoslancer_data
     ${SDL2_LIBRARIES}
+    SDL2_ttf::SDL2_ttf
     OpenGL::GL
     GLEW::GLEW
 )

@@ -43,7 +43,7 @@ int main(int argc, char** argv) {
     config.fullscreen = !device.windowed;
     config.gamma = device.gamma;
 
-    if (!app.init(config)) {
+    if (!app.init(config, paths.iniPath)) {
         return 1;
     }
 
