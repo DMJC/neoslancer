@@ -22,6 +22,12 @@ how the original engine behaves.
   needing systems this project doesn't have yet (save files, mission
   briefing, multiplayer, the ship-interior VR loop) are honest
   "not implemented" placeholders rather than guesses.
+- Parsers for the WinVFX `.fnt`/`.spr` asset formats (menu fonts and UI
+  sprites), recovered from `winvfx8.dll` directly (a third-party 2D
+  middleware library the original engine never parses these itself -
+  see `WinVfxFont.h`/`WinVfxSprite.h`) and validated against real game
+  data. Not yet wired into rendering - menu text still uses a placeholder
+  system font via SDL_ttf.
 
 No actual gameplay (flight/combat, mission loading, rendering of real
 assets) has been ported yet.
