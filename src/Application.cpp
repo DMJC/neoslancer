@@ -25,7 +25,7 @@ void registerMenuScreens(MenuManager& manager, const std::string& iniPath, const
     using namespace MenuScreenId;
 
     manager.registerScreen(Intro, std::make_unique<IntroScreen>(dataRoot));
-    manager.registerScreen(MainMenu, std::make_unique<MainMenuScreen>());
+    manager.registerScreen(MainMenu, std::make_unique<MainMenuScreen>(dataRoot));
     manager.registerScreen(OptionsMenu, std::make_unique<OptionsMenuScreen>());
     manager.registerScreen(SoundOptions, std::make_unique<SoundOptionsScreen>(iniPath));
     manager.registerScreen(VideoOptions, std::make_unique<VideoOptionsScreen>(iniPath));

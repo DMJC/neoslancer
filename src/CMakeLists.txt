@@ -8,6 +8,7 @@ add_library(neoslancer_data STATIC
     ResourceLoader.cpp
     WinVfxFont.cpp
     WinVfxSprite.cpp
+    WinVfxPalette.cpp
     vr/VRRoomGraph.cpp
 )
 
@@ -26,6 +27,7 @@ add_executable(neoslancer
     gfx/Shader.cpp
     gfx/Font.cpp
     gfx/UIRenderer.cpp
+    gfx/WinVfxRenderer.cpp
     menu/MenuManager.cpp
     menu/ButtonList.cpp
     menu/AdjustableList.cpp

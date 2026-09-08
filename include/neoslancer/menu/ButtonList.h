@@ -25,17 +25,28 @@ struct MenuButton {
 // screen.
 class ButtonList {
 public:
+    struct Rect {
+        float x, y, w, h;
+    };
+
     void setButtons(std::vector<MenuButton> buttons);
     void handleEvent(const SDL_Event& event);
     void render(UIRenderer& renderer, Font& font, float x, float y, float width, float itemHeight, float gap);
 
-private:
-    struct LaidOutRect {
-        float x, y, w, h;
-    };
+    // Computes and stores the hit-test rects without drawing anything -
+    // for screens (e.g. MainMenuScreen with real WinVFX assets) that want
+    // ButtonList's input handling/layout but draw the buttons themselves.
+    // render() calls this internally, so callers only need one or the
+    // other, never both, in the same frame.
+    void layout(float x, float y, float width, float itemHeight, float gap);
 
+    const std::vector<Rect>& rects() const { return m_lastRects; }
+    const std::vector<MenuButton>& buttons() const { return m_buttons; }
+    int selectedIndex() const { return m_selected; }
+
+private:
     std::vector<MenuButton> m_buttons;
-    std::vector<LaidOutRect> m_lastRects; // from the previous render(), used for hit-testing
+    std::vector<Rect> m_lastRects; // from the last layout()/render(), used for hit-testing
     int m_selected = 0;
 
     void activate(int index);
