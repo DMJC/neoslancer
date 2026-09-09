@@ -3,42 +3,94 @@
 #include "neoslancer/menu/MenuManager.h"
 #include "neoslancer/menu/MenuScreenIds.h"
 
+#include <algorithm>
+#include <cctype>
+#include <cstdio>
+#include <filesystem>
+
 namespace neoslancer {
 
 namespace {
 constexpr int kReferenceWidth = 640;
 constexpr int kReferenceHeight = 480;
+constexpr int kNoAction = -100;
+constexpr int kQuitAction = -101;
+
+std::string toLower(std::string s) {
+    std::transform(s.begin(), s.end(), s.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+    return s;
+}
 } // namespace
 
-const std::array<MainMenuScreen::MainHotspot, 3>& MainMenuScreen::hotspots() {
-    static const std::array<MainHotspot, 3> table = {{
-        {27, 123, 184, 290, 18, MenuScreenId::NewGameSetup, "NEW GAME"},
-        {203, 125, 184, 290, 19, MenuScreenId::MultiplayerSetup, "MULTIPLAYER"},
-        {421, 165, 184, 290, 20, MenuScreenId::OptionsMenu, "OPTIONS"},
+MainMenuScreen::MainMenuScreen(std::string dataRoot, const MenuAssets* assets)
+    : m_dataRoot(std::move(dataRoot)), m_assets(assets) {}
+
+const std::array<MainMenuScreen::Hotspot, 5>& MainMenuScreen::hotspots() {
+    static const std::array<Hotspot, 5> table = {{
+        {27, 123, 184, 290, MenuScreenId::NewGameSetup, "SINGLE\nPLAYER"},
+        {203, 125, 184, 290, MenuScreenId::MultiplayerSetup, "MULTI\nPLAYER"},
+        {421, 165, 184, 290, MenuScreenId::OptionsMenu, "GAME\nOPTIONS"},
+        // Real hit-test rects (Pass 51): index 3 never reaches the action
+        // switch in the original (absorbed by the hit-test loop, a no-op
+        // there) and index 4 secretly re-runs mission 29 as a "watch
+        // ending" cheat - neither is actually wired to the visible
+        // INSTANT ACTION/QUIT text next to them. This port makes QUIT do
+        // what it visibly says instead of silently doing nothing; INSTANT
+        // ACTION has no mode implemented yet, so it's inert.
+        {332, 441, 20, 15, kQuitAction, "QUIT"},
+        {300, 441, 20, 15, kNoAction, "INSTANT ACTION"},
     }};
     return table;
 }
 
-std::array<MainMenuScreen::ScaledRect, 3> MainMenuScreen::layoutHotspots(int windowWidth, int windowHeight) const {
-    const float scaleX = static_cast<float>(windowWidth) / static_cast<float>(kReferenceWidth);
-    const float scaleY = static_cast<float>(windowHeight) / static_cast<float>(kReferenceHeight);
-    std::array<ScaledRect, 3> rects{};
-    const auto& table = hotspots();
-    for (size_t i = 0; i < table.size(); ++i) {
-        rects[i] = {static_cast<float>(table[i].x) * scaleX, static_cast<float>(table[i].y) * scaleY,
-                    static_cast<float>(table[i].w) * scaleX, static_cast<float>(table[i].h) * scaleY};
+MainMenuScreen::ScaledRect MainMenuScreen::viewport(int windowWidth, int windowHeight) const {
+    const float windowAspect = static_cast<float>(windowWidth) / static_cast<float>(windowHeight);
+    constexpr float kReferenceAspect = static_cast<float>(kReferenceWidth) / static_cast<float>(kReferenceHeight);
+    if (windowAspect > kReferenceAspect) {
+        // Window is wider than 4:3 - pillarbox (bars on left/right).
+        const float w = static_cast<float>(windowHeight) * kReferenceAspect;
+        return {(static_cast<float>(windowWidth) - w) * 0.5f, 0.0f, w, static_cast<float>(windowHeight)};
     }
-    return rects;
+    // Window is taller/narrower than 4:3 - letterbox (bars on top/bottom).
+    const float h = static_cast<float>(windowWidth) / kReferenceAspect;
+    return {0.0f, (static_cast<float>(windowHeight) - h) * 0.5f, static_cast<float>(windowWidth), h};
+}
+
+MainMenuScreen::ScaledRect MainMenuScreen::mapRect(int x, int y, int w, int h, int windowWidth,
+                                                    int windowHeight) const {
+    const ScaledRect vp = viewport(windowWidth, windowHeight);
+    const float scale = vp.w / static_cast<float>(kReferenceWidth);
+    return {vp.x + static_cast<float>(x) * scale, vp.y + static_cast<float>(y) * scale, static_cast<float>(w) * scale,
+            static_cast<float>(h) * scale};
 }
 
 void MainMenuScreen::onEnter(MenuManager& manager) {
-    m_extraButtons.setButtons({
-        // Not original buttons - the real entry into the VR loop is via
-        // RunMissionBriefingScreen (screen 7), which this port hasn't
-        // built; this is a direct shortcut to it for now.
-        {"SHIP INTERIOR (DEMO)", [&manager]() { manager.goTo(MenuScreenId::MissionBriefing); }},
-        {"QUIT", [&manager]() { manager.requestQuitApplication(); }},
-    });
+    (void)manager;
+
+    const std::string name = "SPLASH TO MM.BIK";
+    std::string path = m_dataRoot + "/" + name;
+    if (!std::filesystem::exists(path)) {
+        const std::string wanted = toLower(name);
+        std::error_code ec;
+        path.clear();
+        for (const auto& entry : std::filesystem::directory_iterator(m_dataRoot, ec)) {
+            if (toLower(entry.path().filename().string()) == wanted) {
+                path = entry.path().string();
+                break;
+            }
+        }
+    }
+
+    if (path.empty()) {
+        std::fprintf(stderr, "neoslancer: main menu background '%s' not found under data root\n", name.c_str());
+        return;
+    }
+
+    if (m_background.open(path)) {
+        // Fast-forward straight to the final frame - the real menu shows
+        // this as a static backdrop, not a replay of the intro clip.
+        m_background.update(9999.0f);
+    }
 }
 
 void MainMenuScreen::handleEvent(const SDL_Event& event, MenuManager& manager) {
@@ -59,11 +111,19 @@ void MainMenuScreen::handleEvent(const SDL_Event& event, MenuManager& manager) {
                           (event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_SPACE) ||
                           (event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_RETURN);
     if (activate && m_hoveredIndex >= 0) {
-        manager.goTo(hotspots()[static_cast<size_t>(m_hoveredIndex)].targetScreenId);
-        return;
+        const int target = hotspots()[static_cast<size_t>(m_hoveredIndex)].targetScreenId;
+        if (target == kQuitAction) {
+            manager.requestQuitApplication();
+        } else if (target != kNoAction) {
+            manager.goTo(target);
+        }
     }
+}
 
-    m_extraButtons.handleEvent(event);
+bool MainMenuScreen::update(float deltaSeconds, MenuManager& manager) {
+    (void)deltaSeconds;
+    (void)manager;
+    return false; // background is a frozen final frame - nothing to advance
 }
 
 void MainMenuScreen::render(UIRenderer& renderer, Font& font, int windowWidth, int windowHeight) {
@@ -76,118 +136,103 @@ void MainMenuScreen::render(UIRenderer& renderer, Font& font, int windowWidth, i
 
 void MainMenuScreen::renderFallback(UIRenderer& renderer, Font& font, int windowWidth, int windowHeight) {
     renderer.drawRect(0, 0, static_cast<float>(windowWidth), static_cast<float>(windowHeight),
-                       Color{0.02f, 0.03f, 0.08f, 1.0f});
+                       Color{0.0f, 0.0f, 0.0f, 1.0f});
 
-    const std::string title = "STARLANCER";
-    int titleW = 0, titleH = 0;
-    renderer.measureText(font, title, titleW, titleH);
-    renderer.drawText(font, title, (static_cast<float>(windowWidth) - static_cast<float>(titleW)) * 0.5f,
-                       static_cast<float>(windowHeight) * 0.05f, Color{0.75f, 0.85f, 1.0f, 1.0f});
+    const ScaledRect vp = viewport(windowWidth, windowHeight);
+    if (m_background.isOpen()) {
+        renderer.drawTexture(m_background.texture(), vp.x, vp.y, vp.w, vp.h);
+    }
 
-    const auto rects = layoutHotspots(windowWidth, windowHeight);
     const auto& table = hotspots();
     m_hoveredIndex = -1;
     for (size_t i = 0; i < table.size(); ++i) {
-        const auto& r = rects[i];
+        const auto& h = table[i];
+        const ScaledRect r = mapRect(h.x, h.y, h.w, h.h, windowWidth, windowHeight);
         const bool hovered = static_cast<float>(m_mouseX) > r.x && static_cast<float>(m_mouseX) < r.x + r.w &&
                              static_cast<float>(m_mouseY) > r.y && static_cast<float>(m_mouseY) < r.y + r.h;
         if (hovered) {
             m_hoveredIndex = static_cast<int>(i);
         }
         renderer.drawRect(r.x, r.y, r.w, r.h,
-                           hovered ? Color{0.20f, 0.35f, 0.55f, 0.95f} : Color{0.10f, 0.12f, 0.20f, 0.85f});
+                           hovered ? Color{0.9f, 0.7f, 0.2f, 0.55f} : Color{0.3f, 0.6f, 0.9f, 0.35f});
 
         int labelW = 0, labelH = 0;
-        renderer.measureText(font, table[i].label, labelW, labelH);
-        renderer.drawText(font, table[i].label, r.x + (r.w - static_cast<float>(labelW)) * 0.5f,
-                           r.y + r.h - static_cast<float>(labelH) - 12.0f, Color{0.90f, 0.92f, 1.0f, 1.0f});
+        renderer.measureText(font, h.label, labelW, labelH);
+        renderer.drawText(font, h.label, r.x + (r.w - static_cast<float>(labelW)) * 0.5f,
+                           r.y + (r.h - static_cast<float>(labelH)) * 0.5f, Color{0.6f, 0.85f, 1.0f, 1.0f});
     }
-
-    const float buttonWidth = 340.0f;
-    const float buttonHeight = 40.0f;
-    const float gap = 10.0f;
-    const float bx = (static_cast<float>(windowWidth) - buttonWidth) * 0.5f;
-    const float by = static_cast<float>(windowHeight) - (buttonHeight + gap) * 2.0f - 16.0f;
-    m_extraButtons.render(renderer, font, bx, by, buttonWidth, buttonHeight, gap);
 }
 
 void MainMenuScreen::renderWithWinVfx(UIRenderer& renderer, int windowWidth, int windowHeight) {
     renderer.drawRect(0, 0, static_cast<float>(windowWidth), static_cast<float>(windowHeight),
-                       Color{0.02f, 0.03f, 0.08f, 1.0f});
+                       Color{0.0f, 0.0f, 0.0f, 1.0f});
 
-    WinVfxRenderer& vfx = m_assets->renderer;
-
-    const std::string title = "STARLANCER";
-    int titleW = 0, titleH = 0;
-    vfx.measureText(m_assets->font, title, titleW, titleH);
-    const float titleX = (static_cast<float>(windowWidth) - static_cast<float>(titleW)) * 0.5f;
-    const float titleY = static_cast<float>(windowHeight) * 0.05f;
-    vfx.drawText(renderer, m_assets->font, m_assets->palette, title, titleX, titleY,
-                 Color{0.80f, 0.88f, 1.0f, 1.0f});
-    if (m_assets->spriteLoaded) {
-        vfx.drawTitleAccents(renderer, m_assets->sprite, 1, m_assets->palette, titleX, titleY,
-                             static_cast<float>(titleW), static_cast<float>(titleH));
+    const ScaledRect vp = viewport(windowWidth, windowHeight);
+    if (m_background.isOpen()) {
+        renderer.drawTexture(m_background.texture(), vp.x, vp.y, vp.w, vp.h);
     }
 
-    // The 3 real button hotspots (confidence 5 - see class doc comment),
-    // each filled with a real FRONTEND.SPR shape (size-proximity guess,
-    // see class doc comment) through the real palette.ccb global palette
-    // loaded once at startup in MenuAssets, stretched to exactly fill
-    // the real rect via WinVfxRenderer::drawShapeScaled.
-    const auto rects = layoutHotspots(windowWidth, windowHeight);
+    WinVfxRenderer& vfx = m_assets->renderer;
     const auto& table = hotspots();
     m_hoveredIndex = -1;
     for (size_t i = 0; i < table.size(); ++i) {
-        const auto& r = rects[i];
+        const auto& h = table[i];
+        const ScaledRect r = mapRect(h.x, h.y, h.w, h.h, windowWidth, windowHeight);
         const bool hovered = static_cast<float>(m_mouseX) > r.x && static_cast<float>(m_mouseX) < r.x + r.w &&
                              static_cast<float>(m_mouseY) > r.y && static_cast<float>(m_mouseY) < r.y + r.h;
         if (hovered) {
             m_hoveredIndex = static_cast<int>(i);
         }
 
-        renderer.drawRect(r.x, r.y, r.w, r.h, Color{0.05f, 0.06f, 0.10f, 1.0f});
-        if (m_assets->spriteLoaded) {
-            vfx.drawShapeScaled(renderer, m_assets->sprite, static_cast<size_t>(table[i].spriteIndex),
-                                m_assets->palette, r.x, r.y, r.w, r.h);
+        const Color tint = hovered ? Color{1.0f, 0.85f, 0.3f, 1.0f} : Color{0.35f, 0.75f, 1.0f, 1.0f};
+
+        if (i < 3) {
+            // The 3 large buttons: real StarLancer draws a ring icon here
+            // (unconfirmed which FRONTEND.SPR shape) - not ported, so just
+            // the real two-line label plus a hover outline over the video
+            // frame, positioned in the lower part of the real click zone
+            // to roughly match the real ring+label position visually.
+            const float labelY = r.y + r.h - 90.0f;
+            int labelW = 0, labelH = 0;
+            vfx.measureText(m_assets->font, h.label, labelW, labelH);
+            // h.label may contain "\n" - draw line by line, centered.
+            std::string line1 = h.label;
+            std::string line2;
+            const size_t nl = line1.find('\n');
+            if (nl != std::string::npos) {
+                line2 = line1.substr(nl + 1);
+                line1 = line1.substr(0, nl);
+            }
+            int w1 = 0, hgt = 0, w2 = 0;
+            vfx.measureText(m_assets->font, line1, w1, hgt);
+            vfx.measureText(m_assets->font, line2, w2, hgt);
+            const float cx = r.x + r.w * 0.5f;
+            vfx.drawText(renderer, m_assets->font, m_assets->palette, line1, cx - static_cast<float>(w1) * 0.5f,
+                        labelY, tint);
+            if (!line2.empty()) {
+                vfx.drawText(renderer, m_assets->font, m_assets->palette, line2, cx - static_cast<float>(w2) * 0.5f,
+                            labelY + static_cast<float>(hgt) + 2.0f, tint);
+            }
+            if (hovered) {
+                const float th = 3.0f;
+                renderer.drawRect(r.x, r.y, r.w, th, tint);
+                renderer.drawRect(r.x, r.y + r.h - th, r.w, th, tint);
+                renderer.drawRect(r.x, r.y, th, r.h, tint);
+                renderer.drawRect(r.x + r.w - th, r.y, th, r.h, tint);
+            }
+        } else {
+            // Instant Action / Quit: small icon box + label, real position.
+            renderer.drawRect(r.x, r.y, r.w, r.h, hovered ? Color{1.0f, 0.75f, 0.2f, 1.0f} : Color{0.7f, 0.5f, 0.1f, 1.0f});
+            int labelW = 0, labelH = 0;
+            vfx.measureText(m_assets->font, h.label, labelW, labelH);
+            const float labelY = r.y + (r.h - static_cast<float>(labelH)) * 0.5f;
+            if (i == 3) { // QUIT: label to the right of the box
+                vfx.drawText(renderer, m_assets->font, m_assets->palette, h.label, r.x + r.w + 6.0f, labelY, tint);
+            } else { // INSTANT ACTION: label to the left of the box
+                vfx.drawText(renderer, m_assets->font, m_assets->palette, h.label,
+                            r.x - static_cast<float>(labelW) - 6.0f, labelY, tint);
+            }
         }
-        const Color frameTint = hovered ? Color{0.9f, 0.85f, 0.2f, 0.9f} : Color{0.4f, 0.7f, 1.0f, 0.6f};
-        const float frameThickness = 3.0f;
-        renderer.drawRect(r.x, r.y, r.w, frameThickness, frameTint);
-        renderer.drawRect(r.x, r.y + r.h - frameThickness, r.w, frameThickness, frameTint);
-        renderer.drawRect(r.x, r.y, frameThickness, r.h, frameTint);
-        renderer.drawRect(r.x + r.w - frameThickness, r.y, frameThickness, r.h, frameTint);
-
-        int labelW = 0, labelH = 0;
-        vfx.measureText(m_assets->font, table[i].label, labelW, labelH);
-        const float labelBarH = static_cast<float>(labelH) + 16.0f;
-        renderer.drawRect(r.x, r.y + r.h - labelBarH, r.w, labelBarH, Color{0.0f, 0.0f, 0.0f, 0.6f});
-        vfx.drawText(renderer, m_assets->font, m_assets->palette, table[i].label,
-                     r.x + (r.w - static_cast<float>(labelW)) * 0.5f, r.y + r.h - labelBarH + 8.0f,
-                     Color{0.92f, 0.94f, 1.0f, 1.0f});
-    }
-
-    const float buttonWidth = 340.0f;
-    const float buttonHeight = 40.0f;
-    const float gap = 10.0f;
-    const float bx = (static_cast<float>(windowWidth) - buttonWidth) * 0.5f;
-    const float by = static_cast<float>(windowHeight) - (buttonHeight + gap) * 2.0f - 16.0f;
-    m_extraButtons.layout(bx, by, buttonWidth, buttonHeight, gap);
-
-    const Color normalBg{0.10f, 0.12f, 0.20f, 0.85f};
-    const Color selectedBg{0.20f, 0.35f, 0.55f, 0.95f};
-    const Color textTint{0.90f, 0.92f, 1.0f, 1.0f};
-    const auto& extraRects = m_extraButtons.rects();
-    const auto& extraList = m_extraButtons.buttons();
-    for (size_t i = 0; i < extraList.size(); ++i) {
-        const auto& r = extraRects[i];
-        renderer.drawRect(r.x, r.y, r.w, r.h,
-                           static_cast<int>(i) == m_extraButtons.selectedIndex() ? selectedBg : normalBg);
-
-        int labelW = 0, labelH = 0;
-        vfx.measureText(m_assets->font, extraList[i].label, labelW, labelH);
-        vfx.drawText(renderer, m_assets->font, m_assets->palette, extraList[i].label,
-                     r.x + (r.w - static_cast<float>(labelW)) * 0.5f, r.y + (r.h - static_cast<float>(labelH)) * 0.5f,
-                     textTint);
     }
 }
 

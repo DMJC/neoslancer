@@ -1,67 +1,68 @@
 #pragma once
 
-#include "neoslancer/menu/ButtonList.h"
 #include "neoslancer/menu/MenuAssets.h"
 #include "neoslancer/menu/MenuScreen.h"
+#include "neoslancer/video/BinkVideoPlayer.h"
 
 #include <array>
 #include <string>
 
 namespace neoslancer {
 
-// RunMainMenuScreen (screen ID 0). Confidence 5: the 3 real button
-// hotspots below are read directly from the binary's own hit-test table
-// (../StarLancer/reversing docs, "Document hotspot layouts for all 12
-// menu screens" pass, table at 0x4e5b90) - x/y/w/h in the game's native
-// 640x480 reference space, scaled to the actual window the same way
-// VRRoomScreen does. Two more table entries exist (index 3/4) but
-// dispatch to a hidden mission-29 trigger / are inert, per that same
-// pass - not ported.
+// RunMainMenuScreen (screen ID 0). Confidence 5 on every coordinate below
+// (../StarLancer/reversing docs, table at 0x4e5b90, decoded fully in
+// Pass 51): 3 large hit-test rects (New Game/Multiplayer/Options) plus 2
+// small ones (Instant Action / a hidden "watch ending" mission-29 cheat)
+// at the bottom - x/y/w/h in the game's native 640x480 reference space,
+// letterboxed into the actual window at a fixed 4:3 aspect (the original
+// never ran at any other ratio).
 //
-// What's NOT confirmed: WHICH FRONTEND.SPR shape (if any) is drawn in
-// each of these 3 real hotspot rects - no widget/shape-index table for
-// this exists in the docs (only the hit-test rects were recovered). This
-// port fills them with FRONTEND.SPR shapes 18/19/20 as a size-proximity
-// guess (they closely match the ~184-190x290px real rect dimensions),
-// stretched to exactly fill each real rect via
-// WinVfxRenderer::drawShapeScaled. The RLE decoder is independently
-// confirmed byte-exact against WINVFX8.DLL's own
-// VFX_shape_blit_unclipped disassembly, and the palette used is
-// palette.ccb - per ../StarLancer/reversing docs Pass 54 (confidence 5),
-// this is the single global palette InitializeGraphicsDevice loads once
-// at startup and every menu screen renders through for its entire
-// lifetime (no per-screen or per-shape palette switch exists in the real
-// game); loaded once here too, in MenuAssets, and shared by every menu
-// screen the same way. The title position and the 2 extra buttons (Ship
-// Interior demo, Quit) are our own additions, not in the original
-// hotspot table.
+// The background is NOT a FRONTEND.SPR shape - decompiling the screen's
+// own per-frame draw function (Lancer.exe 0x4291b6) directly shows
+// FRONTEND.SPR shapes 18/19/20 are only ever drawn while that specific
+// hotspot is under the mouse (a hover-highlight overlay, never a
+// permanent backdrop); no unconditional "draw background" shape call
+// exists in that function at all. Byte-for-byte comparing a live Wine
+// run of the real game against this port's own asset pipeline settled
+// it: the visible background is simply the frozen final frame of the
+// intro sequence's last clip, SPLASH TO MM.BIK (already decoded
+// correctly by this port's BinkVideoPlayer) - real StarLancer holds
+// that frame as the menu's backdrop instead of discarding it. This
+// screen owns its own BinkVideoPlayer for exactly that purpose; the
+// hover-highlight shapes are not ported yet (unconfirmed which of
+// FRONTEND.SPR's shapes is the correct glow asset - the size-proximity
+// guess used earlier was never confirmed and is not re-used here).
 class MainMenuScreen : public MenuScreen {
 public:
-    explicit MainMenuScreen(const MenuAssets* assets) : m_assets(assets) {}
+    MainMenuScreen(std::string dataRoot, const MenuAssets* assets);
 
     void onEnter(MenuManager& manager) override;
     void handleEvent(const SDL_Event& event, MenuManager& manager) override;
+    bool update(float deltaSeconds, MenuManager& manager) override;
     void render(UIRenderer& renderer, Font& font, int windowWidth, int windowHeight) override;
 
 private:
-    struct MainHotspot {
-        int x, y, w, h;    // 640x480 reference space, confidence 5 (see class doc comment)
-        int spriteIndex;   // FRONTEND.SPR shape to fill it with - confidence 1, our own guess
+    struct Hotspot {
+        int x, y, w, h; // 640x480 reference space, confidence 5 (see class doc comment)
         int targetScreenId;
-        const char* label;
+        const char* label; // two lines, "\n"-separated where real; nullptr = no visible label (small icon buttons)
     };
-    static const std::array<MainHotspot, 3>& hotspots();
+    static const std::array<Hotspot, 5>& hotspots();
 
     struct ScaledRect {
         float x, y, w, h;
     };
-    std::array<ScaledRect, 3> layoutHotspots(int windowWidth, int windowHeight) const;
+    // Maps a 640x480-reference-space rect into a 4:3-letterboxed area of
+    // the actual window (pillar/letterboxed, never stretched off-ratio).
+    ScaledRect mapRect(int x, int y, int w, int h, int windowWidth, int windowHeight) const;
+    ScaledRect viewport(int windowWidth, int windowHeight) const;
 
     void renderWithWinVfx(UIRenderer& renderer, int windowWidth, int windowHeight);
     void renderFallback(UIRenderer& renderer, Font& font, int windowWidth, int windowHeight);
 
+    std::string m_dataRoot;
     const MenuAssets* m_assets;
-    ButtonList m_extraButtons; // Ship Interior demo / Quit - our own additions
+    BinkVideoPlayer m_background;
 
     int m_mouseX = 0, m_mouseY = 0;
     int m_hoveredIndex = -1;
