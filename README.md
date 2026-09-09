@@ -31,9 +31,13 @@ how the original engine behaves.
 - The ship-interior VR loop (`RunShipInteriorVRLoop`): real hotspot
   navigation over a real (partial) slice of the actual room graph,
   re-derived from `Lancer.exe`'s own data, with real `.bik` video
-  playback via FFmpeg's independent Bink decoder. Reachable from the
-  Main Menu's "SHIP INTERIOR (DEMO)" button. Plus the logo/splash intro
-  movie sequence WinMain plays before the menu ever appears.
+  playback via FFmpeg's independent Bink decoder. Registered as screen
+  ID 7 (`MissionBriefing`) but not currently wired to a Main Menu
+  button. Plus the logo/splash intro movie sequence
+  WinMain plays before the menu ever appears - the Main Menu itself then
+  reuses that sequence's last clip (`SPLASH TO MM.BIK`), frozen on its
+  final frame, as its own background (confirmed against a real, Wine-run
+  copy of the game).
 
 No actual gameplay (flight/combat, mission loading, mission briefing)
 has been ported yet.
@@ -47,8 +51,36 @@ pkg-config).
 ```sh
 cmake -S . -B build
 cmake --build build
-./build/src/neoslancer
 ```
+
+## Running
+
+This repository contains no game data - only Digital Anvil's original,
+proprietary `RESOURCE.HOG` and friends make anything appear on screen.
+You need a copy of an actual StarLancer install (retail CD, GOG, etc.) with
+at least the following present directly inside its top-level folder:
+
+- `RESOURCE.HOG` - the main asset archive (menus, fonts, sprites, palette).
+- `starlancer.ini` - device/video config; created if missing.
+- The intro/menu movies: `NEW_NMS.BIK`, `NEW_DALOGO_FS_UNCMPR.BIK`,
+  `WARTY_.BIK`, `SPLASH TO MM.BIK` (its final frame becomes the Main
+  Menu's own background).
+- `SHIPS/`, `MISSILES/`, `GUNS/`, `ADD_ONS/` - not yet consumed by
+  anything ported so far, but resolved up front regardless.
+
+Point neoslancer at that directory with the `NEOSLANCER_DATA` environment
+variable:
+
+```sh
+NEOSLANCER_DATA=/path/to/StarLancer ./build/src/neoslancer
+```
+
+If `NEOSLANCER_DATA` isn't set, it falls back to the directory the
+`neoslancer` binary itself lives in - so copying (or symlinking) a real
+install's files next to `build/src/neoslancer` works too. A missing/wrong
+data root isn't fatal: menus fall back to a placeholder SDL_ttf font
+instead of the real game's assets, and a missing `RESOURCE.HOG` is only
+logged, not treated as an error, so partial/incomplete data still boots.
 
 ## Layout
 
