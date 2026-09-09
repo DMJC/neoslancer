@@ -47,6 +47,15 @@ public:
 
     void drawShape(UIRenderer& renderer, const WinVfxSprite& sprite, size_t shapeIndex, const WinVfxPalette& palette,
                    float x, float y, Color tint = {1.0f, 1.0f, 1.0f, 1.0f});
+
+    // Same, but stretched to an explicit w/h instead of the shape's own
+    // native size - for fitting real art into a real, confirmed hotspot
+    // rect (e.g. RunMainMenuScreen's 3 button rects) whose dimensions
+    // don't exactly match any one decoded shape's own bounding box.
+    void drawShapeScaled(UIRenderer& renderer, const WinVfxSprite& sprite, size_t shapeIndex,
+                         const WinVfxPalette& palette, float x, float y, float w, float h,
+                         Color tint = {1.0f, 1.0f, 1.0f, 1.0f});
+
     bool shapeSize(const WinVfxSprite& sprite, size_t shapeIndex, int& outWidth, int& outHeight) const;
 
     // Draws shapeIndex flanking a title's left/right edges, vertically

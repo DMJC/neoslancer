@@ -154,6 +154,15 @@ void WinVfxRenderer::drawShape(UIRenderer& renderer, const WinVfxSprite& sprite,
     renderer.drawTexture(tex->texture, x, y, static_cast<float>(tex->width), static_cast<float>(tex->height), tint);
 }
 
+void WinVfxRenderer::drawShapeScaled(UIRenderer& renderer, const WinVfxSprite& sprite, size_t shapeIndex,
+                                      const WinVfxPalette& palette, float x, float y, float w, float h, Color tint) {
+    const GlTexture* tex = getOrCreateShapeTexture(sprite, shapeIndex, palette);
+    if (!tex) {
+        return;
+    }
+    renderer.drawTexture(tex->texture, x, y, w, h, tint);
+}
+
 void WinVfxRenderer::drawTitleAccents(UIRenderer& renderer, const WinVfxSprite& sprite, size_t shapeIndex,
                                        const WinVfxPalette& palette, float titleX, float titleY, float titleW,
                                        float titleH, float gap) {
