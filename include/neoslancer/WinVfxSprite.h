@@ -43,12 +43,18 @@ namespace neoslancer {
 // pixel-exact against a real screenshot for MEDAL1-6.SPR, and this
 // port independently scanned every one of the 337 real .spr files
 // under gamedata/ (detecting the same 768-byte-gap-before-shape-1
-// pattern): 93 of them have it - the 6 medal files plus the large
-// majority of *SCEM.SPR faction/ship emblem icons, out of 178
-// multi-shape files total (159 more have only 1 shape, leaving no
-// room for a reserved slot at all). NOT universal, though: FRONTEND.SPR
-// also has this exact 768-byte gap shape, but using it doesn't produce
-// a coherent image for its large shapes - those are understood to be
+// pattern): 93 of them have it, out of 178 multi-shape files total
+// (159 more have only 1 shape, leaving no room for a reserved slot at
+// all) - mostly UI/menu sprite sheets (MEDAL1-6/RMEDAL1-3, the BAR1-6
+// ribbon-bar icons, FRONTEND.SPR and its FRNTEND2-7 siblings,
+// CAPSHIPS/FIGHTERS/PERSONS/SQUADS/LOGOS/QUIT/RESTART, etc.).
+// Notably, NONE of the *SCEM.SPR faction/ship emblem icons have it -
+// those presumably render through the shared global .ccb palette
+// instead, consistent with wanting one consistent set of faction
+// colors rather than a color scheme baked into each crest individually.
+// Also NOT universal even within the UI-sheet group: FRONTEND.SPR has
+// this exact 768-byte gap shape, but using it doesn't produce a
+// coherent image for its large shapes - those are understood to be
 // hover-highlight overlays never meant to render standalone, not a
 // counterexample to this mechanism itself; CURSOR.SPR and other
 // multi-shape files lacking the gap presumably rely on the shared
