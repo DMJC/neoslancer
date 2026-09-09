@@ -72,8 +72,19 @@ void printUsage(const char* argv0) {
                   "\n"
                   "Controls: Left/Right (or A/D) - prev/next shape\n"
                   "          Home/End           - first/last shape\n"
+                  "          R                  - swap red/blue channels\n"
                   "          Esc or Q           - quit\n",
                   argv0);
+}
+
+// R/B channel swap, e.g. to sanity-check a palette parsed with the wrong
+// byte order (BGR vs RGB) against a known-good result.
+neoslancer::WinVfxPalette swapRedBlue(const neoslancer::WinVfxPalette& source) {
+    neoslancer::WinVfxPalette swapped = source;
+    for (auto& color : swapped.colors) {
+        std::swap(color[0], color[2]);
+    }
+    return swapped;
 }
 
 } // namespace
@@ -115,6 +126,8 @@ int main(int argc, char** argv) {
             palette.colors[i] = {v, v, v};
         }
     }
+    const neoslancer::WinVfxPalette swappedPalette = swapRedBlue(palette);
+    bool redBlueSwapped = false;
 
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS) != 0) {
         std::fprintf(stderr, "sprviewer: SDL_Init failed: %s\n", SDL_GetError());
@@ -186,6 +199,12 @@ int main(int argc, char** argv) {
                     index = 0;
                 } else if (key == SDLK_END) {
                     index = sprite.shapes.size() - 1;
+                } else if (key == SDLK_r) {
+                    redBlueSwapped = !redBlueSwapped;
+                    // The shape texture cache is keyed on (sprite, shape
+                    // index) only, not the palette used to bake it - clear
+                    // it so the next draw rebuilds with the other palette.
+                    vfx.shutdown();
                 }
             }
         }
@@ -210,7 +229,8 @@ int main(int argc, char** argv) {
             const float drawH = static_cast<float>(shape.height) * scale;
             const float drawX = (windowW - drawW) * 0.5f;
             const float drawY = kHeaderHeight + (availH - drawH) * 0.5f + 10.0f;
-            vfx.drawShapeScaled(renderer, sprite, index, palette, drawX, drawY, drawW, drawH);
+            vfx.drawShapeScaled(renderer, sprite, index, redBlueSwapped ? swappedPalette : palette, drawX, drawY,
+                                drawW, drawH);
         }
 
         if (font.isLoaded()) {
@@ -220,14 +240,17 @@ int main(int argc, char** argv) {
             renderer.drawText(font, line, 12.0f, 8.0f, neoslancer::Color{0.9f, 0.95f, 1.0f, 1.0f});
 
             if (shape.width > 0 && shape.height > 0) {
-                std::snprintf(line, sizeof(line), "%dx%d   bounds (%d,%d)-(%d,%d)%s", shape.width, shape.height,
-                              shape.minX, shape.minY, shape.maxX, shape.maxY, paletteLoaded ? "" : "   (no palette - greyscale by index)");
+                std::snprintf(line, sizeof(line), "%dx%d   bounds (%d,%d)-(%d,%d)%s%s", shape.width, shape.height,
+                              shape.minX, shape.minY, shape.maxX, shape.maxY,
+                              paletteLoaded ? "" : "   (no palette - greyscale by index)",
+                              redBlueSwapped ? "   (R/B swapped)" : "");
             } else {
                 std::snprintf(line, sizeof(line), "unparseable (bogus bounds) - see WinVfxSprite.h");
             }
             renderer.drawText(font, line, 12.0f, 30.0f, neoslancer::Color{0.7f, 0.75f, 0.8f, 1.0f});
 
-            const std::string hint = "Left/Right: prev/next   Home/End: first/last   Esc/Q: quit";
+            const std::string hint =
+                "Left/Right: prev/next   Home/End: first/last   R: swap red/blue   Esc/Q: quit";
             int hintW = 0, hintH = 0;
             renderer.measureText(font, hint, hintW, hintH);
             renderer.drawText(font, hint, (windowW - static_cast<float>(hintW)) * 0.5f, windowH - kFooterHeight + 6.0f,

@@ -92,8 +92,10 @@ logged, not treated as an error, so partial/incomplete data still boots.
   files on disk are transparently RefPack-decompressed if needed, same
   as archive entries). Steps through every shape with Left/Right
   (Home/End for first/last); without a palette argument, shapes render
-  as greyscale-by-index instead of real color. Useful for checking a raw
-  `.spr` file's shape count/bounds/decode without launching the full
+  as greyscale-by-index instead of real color. R swaps the red/blue
+  channels, for sanity-checking a palette that looks like it might be
+  parsed in the wrong byte order. Useful for checking a raw `.spr`
+  file's shape count/bounds/decode without launching the full
   game, e.g. `./build/src/sprviewer /path/to/StarLancer/cd1/YOVB.SPR
   /path/to/StarLancer/SOFTPAL.CCB` for a loose file, or
   `hogdump RESOURCE.HOG --extract FRONTEND.SPR /tmp/frontend.spr` first
