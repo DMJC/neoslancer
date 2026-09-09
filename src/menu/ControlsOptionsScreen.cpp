@@ -68,10 +68,21 @@ void ControlsOptionsScreen::onEnter(MenuManager& manager) {
 void ControlsOptionsScreen::handleEvent(const SDL_Event& event, MenuManager& manager) {
     if (event.type == SDL_KEYDOWN &&
         (event.key.keysym.sym == SDLK_ESCAPE || event.key.keysym.sym == SDLK_BACKSPACE)) {
+        if (m_assets) {
+            playMenuTransition(*m_assets, "optfade2.bik");
+        }
         manager.goTo(MenuScreenId::OptionsMenu);
         return;
     }
     m_rows.handleEvent(event);
+}
+
+bool ControlsOptionsScreen::update(float deltaSeconds, MenuManager& manager) {
+    (void)manager;
+    if (m_assets && m_assets->backgroundLoaded) {
+        m_assets->background.update(deltaSeconds);
+    }
+    return false;
 }
 
 void ControlsOptionsScreen::render(UIRenderer& renderer, Font& font, int windowWidth, int windowHeight) {

@@ -17,11 +17,15 @@ namespace neoslancer {
 //
 // Loads its own sprite sheet, `interface\frntend4.spr` - a DIFFERENT
 // file from the shared FRONTEND.SPR in MenuAssets, with its own
-// embedded palette (WinVfxSprite.h). No `.bik` video is opened by this
-// screen at all (confirmed: no BinkOpen call anywhere in its
-// decompile) - the background is simply whatever MenuAssets::background
-// is already showing (the Main Menu's frozen video frame - see
-// MainMenuScreen.h), left untouched.
+// embedded palette (WinVfxSprite.h). No `.bik` is opened for a
+// persistent background by this screen itself (confirmed: no BinkOpen
+// call anywhere in its own per-frame draw) - but real StarLancer DOES
+// play a short transition clip at each navigation edge into/out of this
+// screen (../StarLancer/reversing docs Pass 60's real call map:
+// main2opt.bik entering from the Main Menu, opt2main.bik leaving to it,
+// optfade.bik entering a sub-screen, optfade2.bik returning from one -
+// see MenuAssets::playMenuTransition), whose frozen final frame then
+// becomes the backdrop actually shown at rest - ported that way here.
 //
 // The 3 large category tiles show NO shape in their base state (no
 // unconditional large-shape draw exists in the real per-frame function
@@ -40,6 +44,7 @@ public:
 
     void onEnter(MenuManager& manager) override;
     void handleEvent(const SDL_Event& event, MenuManager& manager) override;
+    bool update(float deltaSeconds, MenuManager& manager) override;
     void render(UIRenderer& renderer, Font& font, int windowWidth, int windowHeight) override;
 
 private:

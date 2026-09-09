@@ -3,6 +3,7 @@
 #include "neoslancer/GameConfig.h"
 #include "neoslancer/menu/AdjustableList.h"
 #include "neoslancer/menu/MenuAssets.h"
+#include "neoslancer/menu/MenuLayout.h"
 #include "neoslancer/menu/MenuScreen.h"
 
 #include <string>
@@ -17,12 +18,20 @@ namespace neoslancer {
 // are our own placeholder list (real device enumeration isn't ported),
 // and this screen's back-target (-> Options hub, screen 1) is our own
 // reasonable inference, not something the docs state explicitly.
+//
+// Shares MenuAssets::background (see MenuAssets.h) rather than a plain
+// fill - leaving to the Options hub plays the real optfade2.bik
+// transition clip first (../StarLancer/reversing docs Pass 60's call
+// map: this exact clip for a sub-screen returning to the main-menu-
+// Options context), whose frozen final frame then becomes this screen's
+// own backdrop for as long as it's shown.
 class SoundOptionsScreen : public MenuScreen {
 public:
     SoundOptionsScreen(std::string iniPath, const MenuAssets* assets);
 
     void onEnter(MenuManager& manager) override;
     void handleEvent(const SDL_Event& event, MenuManager& manager) override;
+    bool update(float deltaSeconds, MenuManager& manager) override;
     void render(UIRenderer& renderer, Font& font, int windowWidth, int windowHeight) override;
 
 private:

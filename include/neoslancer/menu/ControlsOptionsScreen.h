@@ -33,15 +33,18 @@ namespace neoslancer {
 // (title/body text, centered list) doesn't otherwise match the real
 // screen's very different one (a full scrollable 12-row key-rebind
 // list this port doesn't have a data model for - see above). No `.bik`
-// video is opened by this screen either; the background is
-// MenuAssets::background, shared with every other screen reachable
-// from the Main Menu without a movie of its own.
+// is opened for a persistent background by this screen itself, but
+// leaving to the Options hub plays the real optfade2.bik transition
+// clip first (../StarLancer/reversing docs Pass 60), whose frozen final
+// frame becomes MenuAssets::background - shared with every other screen
+// reachable from the Main Menu, not owned per-screen.
 class ControlsOptionsScreen : public MenuScreen {
 public:
     ControlsOptionsScreen(std::string iniPath, const MenuAssets* assets);
 
     void onEnter(MenuManager& manager) override;
     void handleEvent(const SDL_Event& event, MenuManager& manager) override;
+    bool update(float deltaSeconds, MenuManager& manager) override;
     void render(UIRenderer& renderer, Font& font, int windowWidth, int windowHeight) override;
 
 private:

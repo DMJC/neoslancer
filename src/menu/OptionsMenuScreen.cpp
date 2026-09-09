@@ -41,6 +41,9 @@ void OptionsMenuScreen::onEnter(MenuManager& manager) {
 
 void OptionsMenuScreen::handleEvent(const SDL_Event& event, MenuManager& manager) {
     if (event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_ESCAPE) {
+        if (m_assets) {
+            playMenuTransition(*m_assets, "opt2main.bik");
+        }
         manager.goTo(MenuScreenId::MainMenu);
         return;
     }
@@ -60,13 +63,27 @@ void OptionsMenuScreen::handleEvent(const SDL_Event& event, MenuManager& manager
         return;
     }
     if (m_hoveredTile >= 0) {
+        if (m_assets) {
+            playMenuTransition(*m_assets, "optfade.bik");
+        }
         manager.goTo(tiles()[static_cast<size_t>(m_hoveredTile)].targetScreenId);
     } else if (m_hoveredNav >= 0) {
         const int target = navButtons()[static_cast<size_t>(m_hoveredNav)].targetScreenId;
         if (target != kNoAction) {
+            if (target == MenuScreenId::MainMenu && m_assets) {
+                playMenuTransition(*m_assets, "opt2main.bik");
+            }
             manager.goTo(target);
         }
     }
+}
+
+bool OptionsMenuScreen::update(float deltaSeconds, MenuManager& manager) {
+    (void)manager;
+    if (m_assets && m_assets->backgroundLoaded) {
+        m_assets->background.update(deltaSeconds);
+    }
+    return false;
 }
 
 void OptionsMenuScreen::render(UIRenderer& renderer, Font& font, int windowWidth, int windowHeight) {
@@ -148,8 +165,13 @@ void OptionsMenuScreen::renderWithWinVfx(UIRenderer& renderer, int windowWidth, 
             int sw = 0, sh = 0;
             if (vfx.shapeSize(m_sprite, static_cast<size_t>(t.glowShape), sw, sh)) {
                 const ScaledRect glow = mapMenuRect(t.glowX, t.glowY, sw, sh, windowWidth, windowHeight);
+                // Translucent, not opaque - same reasoning as
+                // MainMenuScreen's shape 18/19/20 overlay: at full
+                // opacity these read as scrambled dithered noise, but
+                // blended softly over the background they work as a
+                // plausible glow instead.
                 vfx.drawShapeScaled(renderer, m_sprite, static_cast<size_t>(t.glowShape), m_assets->palette, glow.x,
-                                    glow.y, glow.w, glow.h, Color{1.0f, 1.0f, 1.0f, 0.7f});
+                                    glow.y, glow.w, glow.h, Color{1.0f, 1.0f, 1.0f, 0.35f});
             }
         }
 

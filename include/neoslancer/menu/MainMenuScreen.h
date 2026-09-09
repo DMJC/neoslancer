@@ -23,18 +23,25 @@ namespace neoslancer {
 // permanent backdrop) - ported that way (see renderWithWinVfx). Byte-
 // for-byte comparing a live Wine run of the real game against this
 // port's own asset pipeline settled what the permanent backdrop
-// actually is: the frozen final frame of the intro sequence's last
-// clip, SPLASH TO MM.BIK, which real StarLancer holds instead of
-// discarding. Shared via MenuAssets::background/backgroundLoaded (not
-// owned per-screen) since no screen reachable from here without its own
-// movie (RunOptionsMenuScreen, RunControlsOptionsScreen) ever opens a
-// video or explicitly clears/replaces it either - the real menu system
-// evidently leaves this same frame showing underneath all of them.
+// actually is at rest: the frozen final frame of the intro sequence's
+// last clip, SPLASH TO MM.BIK, which real StarLancer holds instead of
+// discarding. Shared via MenuAssets::background/backgroundLoaded, not
+// owned per-screen.
+//
+// Navigating to Options plays a real transition clip first
+// (main2opt.bik - ../StarLancer/reversing docs Pass 60's real call
+// map), same MenuAssets::playMenuTransition mechanism used throughout
+// the Options hub - see OptionsMenuScreen.h. Single/Multi Player also
+// have real clips (main2sin.bik/main2mul.bik) but aren't wired up here
+// yet: their destinations (NewGameSetup/MultiplayerSetup) are still
+// generic PlaceholderScreens that don't share MenuAssets::background,
+// so playing a transition into one wouldn't have anywhere to land.
 class MainMenuScreen : public MenuScreen {
 public:
     explicit MainMenuScreen(const MenuAssets* assets) : m_assets(assets) {}
 
     void handleEvent(const SDL_Event& event, MenuManager& manager) override;
+    bool update(float deltaSeconds, MenuManager& manager) override;
     void render(UIRenderer& renderer, Font& font, int windowWidth, int windowHeight) override;
 
 private:

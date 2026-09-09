@@ -69,10 +69,21 @@ void SoundOptionsScreen::onEnter(MenuManager& manager) {
 void SoundOptionsScreen::handleEvent(const SDL_Event& event, MenuManager& manager) {
     if (event.type == SDL_KEYDOWN &&
         (event.key.keysym.sym == SDLK_ESCAPE || event.key.keysym.sym == SDLK_BACKSPACE)) {
+        if (m_assets) {
+            playMenuTransition(*m_assets, "optfade2.bik");
+        }
         manager.goTo(MenuScreenId::OptionsMenu);
         return;
     }
     m_rows.handleEvent(event);
+}
+
+bool SoundOptionsScreen::update(float deltaSeconds, MenuManager& manager) {
+    (void)manager;
+    if (m_assets && m_assets->backgroundLoaded) {
+        m_assets->background.update(deltaSeconds);
+    }
+    return false;
 }
 
 void SoundOptionsScreen::render(UIRenderer& renderer, Font& font, int windowWidth, int windowHeight) {
@@ -109,13 +120,19 @@ void SoundOptionsScreen::renderFallback(UIRenderer& renderer, Font& font, int wi
 
 void SoundOptionsScreen::renderWithWinVfx(UIRenderer& renderer, int windowWidth, int windowHeight) {
     renderer.drawRect(0, 0, static_cast<float>(windowWidth), static_cast<float>(windowHeight),
-                       Color{0.02f, 0.03f, 0.08f, 1.0f});
+                       Color{0.0f, 0.0f, 0.0f, 1.0f});
+    if (m_assets->backgroundLoaded) {
+        const ScaledRect vp = menuViewport(windowWidth, windowHeight);
+        renderer.drawTexture(m_assets->background.texture(), vp.x, vp.y, vp.w, vp.h);
+    }
+    renderer.drawRect(0, 0, static_cast<float>(windowWidth), static_cast<float>(windowHeight),
+                       Color{0.0f, 0.0f, 0.0f, 0.45f}); // dim the background so list text stays legible
 
     WinVfxRenderer& vfx = m_assets->renderer;
     const std::string title = "SOUND OPTIONS";
     int titleW = 0, titleH = 0;
     vfx.measureText(m_assets->font, title, titleW, titleH);
-    float cursorY = static_cast<float>(windowHeight) * 0.12f;
+    float cursorY = static_cast<float>(windowHeight) * 0.22f; // below the STARLANCER logo baked into the background
     const float titleX = (static_cast<float>(windowWidth) - static_cast<float>(titleW)) * 0.5f;
     vfx.drawText(renderer, m_assets->font, m_assets->palette, title, titleX, cursorY, Color{0.80f, 0.88f, 1.0f, 1.0f});
     if (m_assets->spriteLoaded) {

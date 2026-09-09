@@ -37,18 +37,23 @@ how the original engine behaves.
   WinMain plays before the menu ever appears - the Main Menu itself then
   reuses that sequence's last clip (`SPLASH TO MM.BIK`), frozen on its
   final frame, as its own background (confirmed against a real, Wine-run
-  copy of the game). Only the Main Menu opens a `.bik` at all, though -
-  decompiling `RunOptionsMenuScreen`/`RunControlsOptionsScreen` directly
-  shows neither ever calls `BinkOpen`; both are static sprite sheets
-  (`frntend4.spr`/`frntend6.spr`, each with their own embedded palette -
-  see `WinVfxSprite.h`) drawn over that same frozen frame, which nothing
-  in the real menu system ever explicitly clears or replaces once shown.
-  Real, decompiled-not-guessed hover-highlight shapes (`MenuAssets.h`,
-  `OptionsMenuScreen.h`, `ControlsOptionsScreen.h`) are ported on the
-  Main Menu and Options hub; Controls Options gets the same real
-  checkbox-frame/checkmark shapes but positioned against this port's own
-  (not pixel-identical) list layout, since it doesn't yet have a data
-  model for the real screen's full scrollable key-rebind list.
+  copy of the game). `RunOptionsMenuScreen`/`RunControlsOptionsScreen`
+  never open a `.bik` for a *persistent* background (both are static
+  sprite sheets, `frntend4.spr`/`frntend6.spr`, each with their own
+  embedded palette - see `WinVfxSprite.h`) - but real StarLancer plays a
+  short real `.bik` fade/wipe clip at almost every menu navigation edge
+  (Main Menu -> Options, Options -> a sub-screen, a sub-screen back to
+  Options, etc.), whose frozen final frame becomes the new backdrop -
+  `MenuAssets::playMenuTransition` ports that mechanism, using the real,
+  per-edge clip name from a full call map recovered directly from the
+  binary (`INTERFACE\*.bik`, 18 clips actually used, another 8
+  referenced-but-dead). Real, decompiled-not-guessed hover-highlight
+  shapes (`MenuAssets.h`, `OptionsMenuScreen.h`, `ControlsOptionsScreen.h`)
+  are ported on the Main Menu and Options hub; Controls Options gets the
+  same real checkbox-frame/checkmark shapes but positioned against this
+  port's own (not pixel-identical) list layout, since it doesn't yet
+  have a data model for the real screen's full scrollable key-rebind
+  list.
 
 No actual gameplay (flight/combat, mission loading, mission briefing)
 has been ported yet.

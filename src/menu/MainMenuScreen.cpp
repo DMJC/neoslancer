@@ -50,9 +50,20 @@ void MainMenuScreen::handleEvent(const SDL_Event& event, MenuManager& manager) {
         if (target == kQuitAction) {
             manager.requestQuitApplication();
         } else if (target != kNoAction) {
+            if (target == MenuScreenId::OptionsMenu && m_assets) {
+                playMenuTransition(*m_assets, "main2opt.bik");
+            }
             manager.goTo(target);
         }
     }
+}
+
+bool MainMenuScreen::update(float deltaSeconds, MenuManager& manager) {
+    (void)manager;
+    if (m_assets && m_assets->backgroundLoaded) {
+        m_assets->background.update(deltaSeconds);
+    }
+    return false;
 }
 
 void MainMenuScreen::render(UIRenderer& renderer, Font& font, int windowWidth, int windowHeight) {
