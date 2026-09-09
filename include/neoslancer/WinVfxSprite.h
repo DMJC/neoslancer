@@ -39,16 +39,25 @@ namespace neoslancer {
 // scaling as WinVfxPalette) for every other shape in the file. This is
 // a DIFFERENT mechanism from the (confirmed-unused, Pass 53)
 // per-shape paletteOffset field above - the palette is per-FILE, not
-// per-shape, conventionally stored as if it were shape 0. Confirmed for
-// MEDAL1-6.SPR; NOT confirmed to hold for every .spr file (e.g.
-// FRONTEND.SPR also has this exact 768-byte gap shape, but using it
-// doesn't produce a coherent image for its large shapes - those are
-// understood to be hover-highlight overlays never meant to render
-// standalone, not a counterexample to this mechanism itself).
-// parseWinVfxSprite detects and exposes it via hasEmbeddedPalette/
-// embeddedPalette below when present, but still leaves shape 0's own
-// entry in `shapes` as an empty placeholder (as for any other
-// unparseable shape) so every other shape keeps its original index.
+// per-shape, conventionally stored as if it were shape 0. Confirmed
+// pixel-exact against a real screenshot for MEDAL1-6.SPR, and this
+// port independently scanned every one of the 337 real .spr files
+// under gamedata/ (detecting the same 768-byte-gap-before-shape-1
+// pattern): 93 of them have it - the 6 medal files plus the large
+// majority of *SCEM.SPR faction/ship emblem icons, out of 178
+// multi-shape files total (159 more have only 1 shape, leaving no
+// room for a reserved slot at all). NOT universal, though: FRONTEND.SPR
+// also has this exact 768-byte gap shape, but using it doesn't produce
+// a coherent image for its large shapes - those are understood to be
+// hover-highlight overlays never meant to render standalone, not a
+// counterexample to this mechanism itself; CURSOR.SPR and other
+// multi-shape files lacking the gap presumably rely on the shared
+// global .ccb palette instead (matching how CURSOR.SPR already renders
+// correctly without it). parseWinVfxSprite detects and exposes it via
+// hasEmbeddedPalette/embeddedPalette below when present, but still
+// leaves shape 0's own entry in `shapes` as an empty placeholder (as
+// for any other unparseable shape) so every other shape keeps its
+// original index.
 //
 // Shape descriptor (at container base + descOffset):
 //   +0x00: "bounds" (opaque to this port - not needed to rasterize)
