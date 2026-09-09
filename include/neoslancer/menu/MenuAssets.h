@@ -5,6 +5,7 @@
 #include "neoslancer/WinVfxPalette.h"
 #include "neoslancer/WinVfxSprite.h"
 #include "neoslancer/gfx/WinVfxRenderer.h"
+#include "neoslancer/video/BinkVideoPlayer.h"
 
 #include <string>
 
@@ -42,6 +43,18 @@ struct MenuAssets {
     // and cache GL textures on first use - a caching implementation
     // detail, not logical state.
     mutable WinVfxRenderer renderer;
+
+    // The Main Menu's background (see MainMenuScreen.h: the frozen final
+    // frame of the intro's last clip, SPLASH TO MM.BIK) - shared here,
+    // not owned per-screen, because no screen this port has traced
+    // (RunOptionsMenuScreen, RunControlsOptionsScreen) ever opens its own
+    // background video or explicitly clears/replaces this one; the real
+    // menu system evidently just leaves it showing underneath every
+    // screen reachable from the Main Menu without a movie of its own.
+    // `backgroundLoaded` false means the file wasn't found - screens
+    // should fall back to a plain background fill.
+    bool backgroundLoaded = false;
+    mutable BinkVideoPlayer background;
 };
 
 bool loadMenuAssets(const std::string& dataRoot, MenuAssets& out);

@@ -3,27 +3,12 @@
 #include "neoslancer/menu/MenuManager.h"
 #include "neoslancer/menu/MenuScreenIds.h"
 
-#include <algorithm>
-#include <cctype>
-#include <cstdio>
-#include <filesystem>
-
 namespace neoslancer {
 
 namespace {
-constexpr int kReferenceWidth = 640;
-constexpr int kReferenceHeight = 480;
 constexpr int kNoAction = -100;
 constexpr int kQuitAction = -101;
-
-std::string toLower(std::string s) {
-    std::transform(s.begin(), s.end(), s.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
-    return s;
-}
 } // namespace
-
-MainMenuScreen::MainMenuScreen(std::string dataRoot, const MenuAssets* assets)
-    : m_dataRoot(std::move(dataRoot)), m_assets(assets) {}
 
 const std::array<MainMenuScreen::Hotspot, 5>& MainMenuScreen::hotspots() {
     static const std::array<Hotspot, 5> table = {{
@@ -41,56 +26,6 @@ const std::array<MainMenuScreen::Hotspot, 5>& MainMenuScreen::hotspots() {
         {300, 441, 20, 15, kNoAction, "INSTANT ACTION"},
     }};
     return table;
-}
-
-MainMenuScreen::ScaledRect MainMenuScreen::viewport(int windowWidth, int windowHeight) const {
-    const float windowAspect = static_cast<float>(windowWidth) / static_cast<float>(windowHeight);
-    constexpr float kReferenceAspect = static_cast<float>(kReferenceWidth) / static_cast<float>(kReferenceHeight);
-    if (windowAspect > kReferenceAspect) {
-        // Window is wider than 4:3 - pillarbox (bars on left/right).
-        const float w = static_cast<float>(windowHeight) * kReferenceAspect;
-        return {(static_cast<float>(windowWidth) - w) * 0.5f, 0.0f, w, static_cast<float>(windowHeight)};
-    }
-    // Window is taller/narrower than 4:3 - letterbox (bars on top/bottom).
-    const float h = static_cast<float>(windowWidth) / kReferenceAspect;
-    return {0.0f, (static_cast<float>(windowHeight) - h) * 0.5f, static_cast<float>(windowWidth), h};
-}
-
-MainMenuScreen::ScaledRect MainMenuScreen::mapRect(int x, int y, int w, int h, int windowWidth,
-                                                    int windowHeight) const {
-    const ScaledRect vp = viewport(windowWidth, windowHeight);
-    const float scale = vp.w / static_cast<float>(kReferenceWidth);
-    return {vp.x + static_cast<float>(x) * scale, vp.y + static_cast<float>(y) * scale, static_cast<float>(w) * scale,
-            static_cast<float>(h) * scale};
-}
-
-void MainMenuScreen::onEnter(MenuManager& manager) {
-    (void)manager;
-
-    const std::string name = "SPLASH TO MM.BIK";
-    std::string path = m_dataRoot + "/" + name;
-    if (!std::filesystem::exists(path)) {
-        const std::string wanted = toLower(name);
-        std::error_code ec;
-        path.clear();
-        for (const auto& entry : std::filesystem::directory_iterator(m_dataRoot, ec)) {
-            if (toLower(entry.path().filename().string()) == wanted) {
-                path = entry.path().string();
-                break;
-            }
-        }
-    }
-
-    if (path.empty()) {
-        std::fprintf(stderr, "neoslancer: main menu background '%s' not found under data root\n", name.c_str());
-        return;
-    }
-
-    if (m_background.open(path)) {
-        // Fast-forward straight to the final frame - the real menu shows
-        // this as a static backdrop, not a replay of the intro clip.
-        m_background.update(9999.0f);
-    }
 }
 
 void MainMenuScreen::handleEvent(const SDL_Event& event, MenuManager& manager) {
@@ -120,12 +55,6 @@ void MainMenuScreen::handleEvent(const SDL_Event& event, MenuManager& manager) {
     }
 }
 
-bool MainMenuScreen::update(float deltaSeconds, MenuManager& manager) {
-    (void)deltaSeconds;
-    (void)manager;
-    return false; // background is a frozen final frame - nothing to advance
-}
-
 void MainMenuScreen::render(UIRenderer& renderer, Font& font, int windowWidth, int windowHeight) {
     if (m_assets && m_assets->loaded) {
         renderWithWinVfx(renderer, windowWidth, windowHeight);
@@ -138,16 +67,16 @@ void MainMenuScreen::renderFallback(UIRenderer& renderer, Font& font, int window
     renderer.drawRect(0, 0, static_cast<float>(windowWidth), static_cast<float>(windowHeight),
                        Color{0.0f, 0.0f, 0.0f, 1.0f});
 
-    const ScaledRect vp = viewport(windowWidth, windowHeight);
-    if (m_background.isOpen()) {
-        renderer.drawTexture(m_background.texture(), vp.x, vp.y, vp.w, vp.h);
+    const ScaledRect vp = menuViewport(windowWidth, windowHeight);
+    if (m_assets && m_assets->backgroundLoaded) {
+        renderer.drawTexture(m_assets->background.texture(), vp.x, vp.y, vp.w, vp.h);
     }
 
     const auto& table = hotspots();
     m_hoveredIndex = -1;
     for (size_t i = 0; i < table.size(); ++i) {
         const auto& h = table[i];
-        const ScaledRect r = mapRect(h.x, h.y, h.w, h.h, windowWidth, windowHeight);
+        const ScaledRect r = mapMenuRect(h.x, h.y, h.w, h.h, windowWidth, windowHeight);
         const bool hovered = static_cast<float>(m_mouseX) > r.x && static_cast<float>(m_mouseX) < r.x + r.w &&
                              static_cast<float>(m_mouseY) > r.y && static_cast<float>(m_mouseY) < r.y + r.h;
         if (hovered) {
@@ -167,9 +96,9 @@ void MainMenuScreen::renderWithWinVfx(UIRenderer& renderer, int windowWidth, int
     renderer.drawRect(0, 0, static_cast<float>(windowWidth), static_cast<float>(windowHeight),
                        Color{0.0f, 0.0f, 0.0f, 1.0f});
 
-    const ScaledRect vp = viewport(windowWidth, windowHeight);
-    if (m_background.isOpen()) {
-        renderer.drawTexture(m_background.texture(), vp.x, vp.y, vp.w, vp.h);
+    const ScaledRect vp = menuViewport(windowWidth, windowHeight);
+    if (m_assets->backgroundLoaded) {
+        renderer.drawTexture(m_assets->background.texture(), vp.x, vp.y, vp.w, vp.h);
     }
 
     WinVfxRenderer& vfx = m_assets->renderer;
@@ -177,7 +106,7 @@ void MainMenuScreen::renderWithWinVfx(UIRenderer& renderer, int windowWidth, int
     m_hoveredIndex = -1;
     for (size_t i = 0; i < table.size(); ++i) {
         const auto& h = table[i];
-        const ScaledRect r = mapRect(h.x, h.y, h.w, h.h, windowWidth, windowHeight);
+        const ScaledRect r = mapMenuRect(h.x, h.y, h.w, h.h, windowWidth, windowHeight);
         const bool hovered = static_cast<float>(m_mouseX) > r.x && static_cast<float>(m_mouseX) < r.x + r.w &&
                              static_cast<float>(m_mouseY) > r.y && static_cast<float>(m_mouseY) < r.y + r.h;
         if (hovered) {
@@ -187,11 +116,23 @@ void MainMenuScreen::renderWithWinVfx(UIRenderer& renderer, int windowWidth, int
         const Color tint = hovered ? Color{1.0f, 0.85f, 0.3f, 1.0f} : Color{0.35f, 0.75f, 1.0f, 1.0f};
 
         if (i < 3) {
-            // The 3 large buttons: real StarLancer draws a ring icon here
-            // (unconfirmed which FRONTEND.SPR shape) - not ported, so just
-            // the real two-line label plus a hover outline over the video
-            // frame, positioned in the lower part of the real click zone
-            // to roughly match the real ring+label position visually.
+            // The 3 large buttons: real StarLancer draws FRONTEND.SPR
+            // shapes 18/19/20 here only while hovered (Lancer.exe
+            // 0x4291b6 - see class doc comment), never as a permanent
+            // background - confirmed by running the real game: with
+            // nothing hovered these buttons show only the video frame
+            // underneath. Drawn translucent, not opaque: rendered at
+            // full opacity these shapes look like scrambled noise
+            // (they're dithered photographic content, not a clean glow
+            // asset), but blended softly over the video frame the way
+            // the real engine's own alpha/tint state
+            // (FUN_00480c40/FUN_00428410, not ported) likely intended,
+            // they read as a plausible backlit highlight instead.
+            if (hovered && m_assets->spriteLoaded) {
+                vfx.drawShapeScaled(renderer, m_assets->sprite, static_cast<size_t>(18 + i), m_assets->palette, r.x,
+                                    r.y, r.w, r.h, Color{1.0f, 1.0f, 1.0f, 0.35f});
+            }
+
             const float labelY = r.y + r.h - 90.0f;
             int labelW = 0, labelH = 0;
             vfx.measureText(m_assets->font, h.label, labelW, labelH);
@@ -221,8 +162,19 @@ void MainMenuScreen::renderWithWinVfx(UIRenderer& renderer, int windowWidth, int
                 renderer.drawRect(r.x + r.w - th, r.y, th, r.h, tint);
             }
         } else {
-            // Instant Action / Quit: small icon box + label, real position.
-            renderer.drawRect(r.x, r.y, r.w, r.h, hovered ? Color{1.0f, 0.75f, 0.2f, 1.0f} : Color{0.7f, 0.5f, 0.1f, 1.0f});
+            // Instant Action / Quit: real per-frame draw (0x4291b6) always
+            // draws shape 27 at exactly this rect, plus shape 28 in
+            // addition while hovered - ported verbatim (both real,
+            // confirmed shape indices and positions, not a guess).
+            if (m_assets->spriteLoaded) {
+                vfx.drawShapeScaled(renderer, m_assets->sprite, 27, m_assets->palette, r.x, r.y, r.w, r.h);
+                if (hovered) {
+                    vfx.drawShapeScaled(renderer, m_assets->sprite, 28, m_assets->palette, r.x, r.y, r.w, r.h);
+                }
+            } else {
+                renderer.drawRect(r.x, r.y, r.w, r.h,
+                                  hovered ? Color{1.0f, 0.75f, 0.2f, 1.0f} : Color{0.7f, 0.5f, 0.1f, 1.0f});
+            }
             int labelW = 0, labelH = 0;
             vfx.measureText(m_assets->font, h.label, labelW, labelH);
             const float labelY = r.y + (r.h - static_cast<float>(labelH)) * 0.5f;

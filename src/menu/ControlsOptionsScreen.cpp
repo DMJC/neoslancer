@@ -3,6 +3,8 @@
 #include "neoslancer/menu/MenuManager.h"
 #include "neoslancer/menu/MenuScreenIds.h"
 
+#include <array>
+
 namespace neoslancer {
 
 namespace {
@@ -57,6 +59,10 @@ void ControlsOptionsScreen::onEnter(MenuManager& manager) {
     (void)manager;
     m_flags = loadKeyConfigFlags(m_iniPath);
     rebuildRows();
+    if (m_assets) {
+        const std::vector<uint8_t> data = m_assets->archive.read("frntend6.spr");
+        m_spriteLoaded = !data.empty() && parseWinVfxSprite(data, m_sprite);
+    }
 }
 
 void ControlsOptionsScreen::handleEvent(const SDL_Event& event, MenuManager& manager) {
@@ -109,13 +115,22 @@ void ControlsOptionsScreen::renderFallback(UIRenderer& renderer, Font& font, int
 
 void ControlsOptionsScreen::renderWithWinVfx(UIRenderer& renderer, int windowWidth, int windowHeight) {
     renderer.drawRect(0, 0, static_cast<float>(windowWidth), static_cast<float>(windowHeight),
-                       Color{0.02f, 0.03f, 0.08f, 1.0f});
+                       Color{0.0f, 0.0f, 0.0f, 1.0f});
+    if (m_assets->backgroundLoaded) {
+        const ScaledRect vp = menuViewport(windowWidth, windowHeight);
+        renderer.drawTexture(m_assets->background.texture(), vp.x, vp.y, vp.w, vp.h);
+    }
+    renderer.drawRect(0, 0, static_cast<float>(windowWidth), static_cast<float>(windowHeight),
+                       Color{0.0f, 0.0f, 0.0f, 0.45f}); // dim the background so list text stays legible
 
     WinVfxRenderer& vfx = m_assets->renderer;
     const std::string title = "CONTROLS OPTIONS";
     int titleW = 0, titleH = 0;
     vfx.measureText(m_assets->font, title, titleW, titleH);
-    float cursorY = static_cast<float>(windowHeight) * 0.10f;
+    // Starts below the STARLANCER logo baked into the shared background
+    // frame (roughly the top fifth of the 640x480 reference space) so
+    // the two titles don't overlap.
+    float cursorY = static_cast<float>(windowHeight) * 0.22f;
     const float titleX = (static_cast<float>(windowWidth) - static_cast<float>(titleW)) * 0.5f;
     vfx.drawText(renderer, m_assets->font, m_assets->palette, title, titleX, cursorY, Color{0.80f, 0.88f, 1.0f, 1.0f});
     if (m_assets->spriteLoaded) {
@@ -140,11 +155,32 @@ void ControlsOptionsScreen::renderWithWinVfx(UIRenderer& renderer, int windowWid
     const Color selectedBg{0.20f, 0.35f, 0.55f, 0.95f};
     const Color labelTint{0.85f, 0.87f, 0.95f, 1.0f};
     const Color valueTint{0.55f, 0.85f, 0.65f, 1.0f};
+    // Real checkbox on/off state per row, matching the real per-frame
+    // draw's own condition for each flag (see class doc comment) - used
+    // below to pick shape 27 (checkmark) on/off, not just the text.
+    const std::array<bool, 4> checked = {m_flags.forceFeedback, m_flags.joystickInvert, m_flags.hatEnable,
+                                         m_flags.twistEnable};
+
     const auto& rects = m_rows.rects();
     const auto& rows = m_rows.rows();
     for (size_t i = 0; i < rows.size(); ++i) {
         const auto& r = rects[i];
         renderer.drawRect(r.x, r.y, r.w, r.h, static_cast<int>(i) == m_rows.selectedIndex() ? selectedBg : normalBg);
+
+        if (i < checked.size() && m_spriteLoaded) {
+            // Real checkbox frame (shape 26, always) + checkmark (shape
+            // 27, only when on) - see class doc comment for the real
+            // source calls this reproduces.
+            const float boxSize = r.h - 8.0f;
+            const float boxX = r.x + r.w - boxSize - 12.0f;
+            const float boxY = r.y + 4.0f;
+            vfx.drawShapeScaled(renderer, m_sprite, 26, m_assets->palette, boxX, boxY, boxSize, boxSize);
+            if (checked[i]) {
+                const float markInset = boxSize * 0.15f;
+                vfx.drawShapeScaled(renderer, m_sprite, 27, m_assets->palette, boxX + markInset, boxY + markInset,
+                                    boxSize - markInset * 2.0f, boxSize - markInset * 2.0f);
+            }
+        }
 
         const std::string value = rows[i].displayValue ? rows[i].displayValue() : "";
         int labelH = 0, labelW = 0;
@@ -154,9 +190,10 @@ void ControlsOptionsScreen::renderWithWinVfx(UIRenderer& renderer, int windowWid
 
         int valueW = 0, valueH = 0;
         vfx.measureText(m_assets->font, value, valueW, valueH);
-        vfx.drawText(renderer, m_assets->font, m_assets->palette, value,
-                     r.x + r.w - static_cast<float>(valueW) - 16.0f, r.y + (r.h - static_cast<float>(valueH)) * 0.5f,
-                     valueTint);
+        const float valueX = (i < checked.size() && m_spriteLoaded) ? r.x + r.w - r.h - static_cast<float>(valueW) - 20.0f
+                                                                      : r.x + r.w - static_cast<float>(valueW) - 16.0f;
+        vfx.drawText(renderer, m_assets->font, m_assets->palette, value, valueX,
+                     r.y + (r.h - static_cast<float>(valueH)) * 0.5f, valueTint);
     }
 
     const std::string hint = "LEFT/RIGHT to adjust, ESC to go back";
