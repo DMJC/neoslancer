@@ -70,6 +70,11 @@ void printUsage(const char* argv0) {
     std::fprintf(stderr,
                   "usage: %s <file.spr> [palette.ccb]\n"
                   "\n"
+                  "If the .spr file carries its own embedded palette (Pass 59 -\n"
+                  "confirmed for MEDAL1-6.SPR, each with its own distinct color\n"
+                  "scheme; see WinVfxSprite.h), that's used automatically and takes\n"
+                  "priority unless [palette.ccb] is given explicitly.\n"
+                  "\n"
                   "Controls: Left/Right (or A/D) - prev/next shape\n"
                   "          Home/End           - first/last shape\n"
                   "          R                  - swap red/blue channels\n"
@@ -110,16 +115,28 @@ int main(int argc, char** argv) {
         return 1;
     }
 
+    // Priority: an explicit palette argument always wins (for deliberately
+    // testing a different one); otherwise prefer the .spr file's own
+    // embedded palette (Pass 59, confidence 5 - see WinVfxSprite.h) over
+    // greyscale, since it's frequently the ONLY correct source of color
+    // for a given file (confirmed for the medal-case UI's MEDAL*.SPR:
+    // each file has its own distinct color scheme baked in, not shared
+    // via any global .ccb palette).
     neoslancer::WinVfxPalette palette;
-    bool paletteLoaded = false;
+    std::string paletteSource;
     if (!palettePath.empty()) {
         const std::vector<uint8_t> palData = loadPossiblyCompressed(palettePath);
-        paletteLoaded = !palData.empty() && neoslancer::parseWinVfxPalette(palData, palette);
-        if (!paletteLoaded) {
-            std::fprintf(stderr, "sprviewer: warning: failed to load palette '%s', using greyscale\n",
-                          palettePath.c_str());
+        if (!palData.empty() && neoslancer::parseWinVfxPalette(palData, palette)) {
+            paletteSource = std::filesystem::path(palettePath).filename().string();
+        } else {
+            std::fprintf(stderr, "sprviewer: warning: failed to load palette '%s'\n", palettePath.c_str());
         }
     }
+    if (paletteSource.empty() && sprite.hasEmbeddedPalette) {
+        palette = sprite.embeddedPalette;
+        paletteSource = "embedded";
+    }
+    const bool paletteLoaded = !paletteSource.empty();
     if (!paletteLoaded) {
         for (size_t i = 0; i < 256; ++i) {
             const uint8_t v = static_cast<uint8_t>(i);
@@ -235,15 +252,17 @@ int main(int argc, char** argv) {
 
         if (font.isLoaded()) {
             char line[256];
-            std::snprintf(line, sizeof(line), "%s  -  shape %zu / %zu", baseName.c_str(), index,
-                          sprite.shapes.size() - 1);
+            std::snprintf(line, sizeof(line), "%s  -  shape %zu / %zu   palette: %s", baseName.c_str(), index,
+                          sprite.shapes.size() - 1, paletteLoaded ? paletteSource.c_str() : "none (greyscale)");
             renderer.drawText(font, line, 12.0f, 8.0f, neoslancer::Color{0.9f, 0.95f, 1.0f, 1.0f});
 
             if (shape.width > 0 && shape.height > 0) {
-                std::snprintf(line, sizeof(line), "%dx%d   bounds (%d,%d)-(%d,%d)%s%s", shape.width, shape.height,
+                std::snprintf(line, sizeof(line), "%dx%d   bounds (%d,%d)-(%d,%d)%s", shape.width, shape.height,
                               shape.minX, shape.minY, shape.maxX, shape.maxY,
-                              paletteLoaded ? "" : "   (no palette - greyscale by index)",
                               redBlueSwapped ? "   (R/B swapped)" : "");
+            } else if (index == 0 && sprite.hasEmbeddedPalette) {
+                std::snprintf(line, sizeof(line),
+                              "not a shape - this file's embedded 256-color palette (see WinVfxSprite.h)");
             } else {
                 std::snprintf(line, sizeof(line), "unparseable (bogus bounds) - see WinVfxSprite.h");
             }

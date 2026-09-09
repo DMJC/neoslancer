@@ -1,5 +1,7 @@
 #include "neoslancer/WinVfxSprite.h"
 
+#include "neoslancer/WinVfxPalette.h"
+
 namespace neoslancer {
 
 namespace {
@@ -92,6 +94,25 @@ bool parseWinVfxSprite(const std::vector<uint8_t>& data, WinVfxSprite& out) {
     for (uint32_t s = 0; s < shapeCount; ++s) {
         const size_t entryOffset = 0x08 + static_cast<size_t>(s) * 8;
         const uint32_t descOffset = readU32LE(data, entryOffset);
+
+        // Whole-file embedded palette, conventionally stored as if it were
+        // shape 0 (../StarLancer/reversing docs Pass 59, confidence 5) -
+        // see WinVfxSprite.h. Detected by the same 768-byte gap to the
+        // next shape's descOffset that Pass 59's decoder used, rather than
+        // just "shape 0 failed to parse" (any shape can fail to parse for
+        // unrelated reasons - the exact size match is what distinguishes
+        // a real embedded palette from an ordinary bogus entry).
+        if (s == 0 && shapeCount > 1) {
+            const uint32_t nextDescOffset = readU32LE(data, entryOffset + 8);
+            if (nextDescOffset >= descOffset && nextDescOffset - descOffset == 768 &&
+                inBounds(data, descOffset, 768)) {
+                const std::vector<uint8_t> paletteBytes(data.begin() + static_cast<std::ptrdiff_t>(descOffset),
+                                                          data.begin() + static_cast<std::ptrdiff_t>(descOffset) + 768);
+                out.hasEmbeddedPalette = parseWinVfxPalette(paletteBytes, out.embeddedPalette);
+                out.shapes.push_back(WinVfxShape{}); // keep index 0 as an empty placeholder
+                continue;
+            }
+        }
 
         WinVfxShape shape;
         if (!inBounds(data, descOffset, 0x18)) {
