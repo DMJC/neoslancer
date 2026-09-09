@@ -21,24 +21,20 @@ namespace neoslancer {
 // What's NOT confirmed: WHICH FRONTEND.SPR shape (if any) is drawn in
 // each of these 3 real hotspot rects - no widget/shape-index table for
 // this exists in the docs (only the hit-test rects were recovered). This
-// port tried FRONTEND.SPR shapes 18/19/20 as a size-proximity guess (they
-// closely match the ~184-190x290px real rect dimensions) but ruled that
-// guess out: decompiling VFX_shape_blit_unclipped (0x100035fc in
-// WINVFX8.DLL) directly confirms this port's RLE decoder is byte-exact
-// (literal-run/solid-run opcodes, count via >>1, dword-optimized copy
-// loop - all present verbatim in the real disassembly), and testing
-// shape 18 against ALL THREE global palettes that exist in the game
-// (palette.ccb, palette3.ccb, softpal.ccb - correctly RefPack-
-// decompressed) still produces incoherent, near-full-256-color-range
-// noise rather than the handful-of-nearby-indices pattern real period
-// dithering produces. So the decode and palette pipeline are correct;
-// shapes 18/19/20 are simply the wrong assets for these buttons (likely
-// some other screen's artwork, or content not meant to be flat-
-// paletted). No sprite fill is drawn in the 3 real panels until the
-// correct shape indices are identified - they render as real-font-
-// labeled, real-position/size bordered hotspots only. The title position
-// and the 2 extra buttons (Ship Interior demo, Quit) are our own
-// additions, not in the original hotspot table.
+// port fills them with FRONTEND.SPR shapes 18/19/20 as a size-proximity
+// guess (they closely match the ~184-190x290px real rect dimensions),
+// stretched to exactly fill each real rect via
+// WinVfxRenderer::drawShapeScaled. The RLE decoder is independently
+// confirmed byte-exact against WINVFX8.DLL's own
+// VFX_shape_blit_unclipped disassembly, and the palette used is
+// palette.ccb - per ../StarLancer/reversing docs Pass 54 (confidence 5),
+// this is the single global palette InitializeGraphicsDevice loads once
+// at startup and every menu screen renders through for its entire
+// lifetime (no per-screen or per-shape palette switch exists in the real
+// game); loaded once here too, in MenuAssets, and shared by every menu
+// screen the same way. The title position and the 2 extra buttons (Ship
+// Interior demo, Quit) are our own additions, not in the original
+// hotspot table.
 class MainMenuScreen : public MenuScreen {
 public:
     explicit MainMenuScreen(const MenuAssets* assets) : m_assets(assets) {}
@@ -50,6 +46,7 @@ public:
 private:
     struct MainHotspot {
         int x, y, w, h;    // 640x480 reference space, confidence 5 (see class doc comment)
+        int spriteIndex;   // FRONTEND.SPR shape to fill it with - confidence 1, our own guess
         int targetScreenId;
         const char* label;
     };

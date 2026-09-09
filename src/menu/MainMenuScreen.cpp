@@ -12,9 +12,9 @@ constexpr int kReferenceHeight = 480;
 
 const std::array<MainMenuScreen::MainHotspot, 3>& MainMenuScreen::hotspots() {
     static const std::array<MainHotspot, 3> table = {{
-        {27, 123, 184, 290, MenuScreenId::NewGameSetup, "NEW GAME"},
-        {203, 125, 184, 290, MenuScreenId::MultiplayerSetup, "MULTIPLAYER"},
-        {421, 165, 184, 290, MenuScreenId::OptionsMenu, "OPTIONS"},
+        {27, 123, 184, 290, 18, MenuScreenId::NewGameSetup, "NEW GAME"},
+        {203, 125, 184, 290, 19, MenuScreenId::MultiplayerSetup, "MULTIPLAYER"},
+        {421, 165, 184, 290, 20, MenuScreenId::OptionsMenu, "OPTIONS"},
     }};
     return table;
 }
@@ -129,13 +129,11 @@ void MainMenuScreen::renderWithWinVfx(UIRenderer& renderer, int windowWidth, int
                              static_cast<float>(titleW), static_cast<float>(titleH));
     }
 
-    // The 3 real button hotspots (confidence 5 - see class doc comment).
-    // No FRONTEND.SPR shape fill: the size-proximity guess (shapes
-    // 18/19/20) was tested and ruled out (see class doc comment) -
-    // decoder and palette pipeline are both confirmed correct, but those
-    // specific shapes render as incoherent noise under every real global
-    // palette, so they're simply the wrong assets. Bordered, real-font-
-    // labeled hotspots only until the right shapes are identified.
+    // The 3 real button hotspots (confidence 5 - see class doc comment),
+    // each filled with a real FRONTEND.SPR shape (size-proximity guess,
+    // see class doc comment) through the real palette.ccb global palette
+    // loaded once at startup in MenuAssets, stretched to exactly fill
+    // the real rect via WinVfxRenderer::drawShapeScaled.
     const auto rects = layoutHotspots(windowWidth, windowHeight);
     const auto& table = hotspots();
     m_hoveredIndex = -1;
@@ -147,8 +145,11 @@ void MainMenuScreen::renderWithWinVfx(UIRenderer& renderer, int windowWidth, int
             m_hoveredIndex = static_cast<int>(i);
         }
 
-        renderer.drawRect(r.x, r.y, r.w, r.h,
-                           hovered ? Color{0.14f, 0.18f, 0.30f, 0.9f} : Color{0.07f, 0.08f, 0.14f, 0.85f});
+        renderer.drawRect(r.x, r.y, r.w, r.h, Color{0.05f, 0.06f, 0.10f, 1.0f});
+        if (m_assets->spriteLoaded) {
+            vfx.drawShapeScaled(renderer, m_assets->sprite, static_cast<size_t>(table[i].spriteIndex),
+                                m_assets->palette, r.x, r.y, r.w, r.h);
+        }
         const Color frameTint = hovered ? Color{0.9f, 0.85f, 0.2f, 0.9f} : Color{0.4f, 0.7f, 1.0f, 0.6f};
         const float frameThickness = 3.0f;
         renderer.drawRect(r.x, r.y, r.w, frameThickness, frameTint);
