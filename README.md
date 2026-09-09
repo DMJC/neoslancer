@@ -82,6 +82,23 @@ data root isn't fatal: menus fall back to a placeholder SDL_ttf font
 instead of the real game's assets, and a missing `RESOURCE.HOG` is only
 logged, not treated as an error, so partial/incomplete data still boots.
 
+## Dev tools
+
+- `hogdump <archive.hog> --list|--extract|--decode-fnt|--decode-spr` -
+  inspect/extract entries from a BigFile archive; see `--help` (no args)
+  for the full set of subcommands.
+- `sprviewer <file.spr> [palette.ccb]` - an interactive SDL2/OpenGL
+  viewer for a single WinVFX `.spr` sprite sheet (loose `.spr`/`.ccb`
+  files on disk are transparently RefPack-decompressed if needed, same
+  as archive entries). Steps through every shape with Left/Right
+  (Home/End for first/last); without a palette argument, shapes render
+  as greyscale-by-index instead of real color. Useful for checking a raw
+  `.spr` file's shape count/bounds/decode without launching the full
+  game, e.g. `./build/src/sprviewer /path/to/StarLancer/cd1/YOVB.SPR
+  /path/to/StarLancer/SOFTPAL.CCB` for a loose file, or
+  `hogdump RESOURCE.HOG --extract FRONTEND.SPR /tmp/frontend.spr` first
+  for one that only exists packed inside the main archive.
+
 ## Layout
 
 ```

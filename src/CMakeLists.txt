@@ -73,3 +73,28 @@ target_link_libraries(hogdump PRIVATE
 target_compile_options(hogdump PRIVATE
     $<$<CXX_COMPILER_ID:GNU,Clang>:-Wall -Wextra>
 )
+
+add_executable(sprviewer
+    tools/sprviewer.cpp
+    Window.cpp
+    gfx/Shader.cpp
+    gfx/Font.cpp
+    gfx/UIRenderer.cpp
+    gfx/WinVfxRenderer.cpp
+)
+
+target_include_directories(sprviewer PRIVATE
+    ${SDL2_INCLUDE_DIRS}
+)
+
+target_link_libraries(sprviewer PRIVATE
+    neoslancer_data
+    ${SDL2_LIBRARIES}
+    SDL2_ttf::SDL2_ttf
+    OpenGL::GL
+    GLEW::GLEW
+)
+
+target_compile_options(sprviewer PRIVATE
+    $<$<CXX_COMPILER_ID:GNU,Clang>:-Wall -Wextra>
+)
