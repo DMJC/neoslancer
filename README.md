@@ -130,10 +130,11 @@ logged, not treated as an error, so partial/incomplete data still boots.
   useful for `RESOURCE/palette.tga`/`softpal.tga`/`palette3.tga` -
   reversing docs Pass 61 found these (not `.ccb`, contrary to this
   project's own earlier assumption) are the real master 256-color
-  palette source `InitializeGraphicsDevice` loads at startup, though
-  `neoslancer` itself hasn't been migrated to read the palette from
-  here yet (still reads `.ccb`, whose actual real purpose Pass 61 also
-  reopened as an unresolved question).
+  palette source `InitializeGraphicsDevice` loads at startup.
+  `MenuAssets` reads `softpal.tga` this way now (`TgaImage.h`'s
+  `parseTgaPalette` - reads only the embedded color map, ignoring the
+  sizeable real image the file also happens to contain); `.ccb`'s own
+  actual real purpose is an open question again.
 
 ## Layout
 

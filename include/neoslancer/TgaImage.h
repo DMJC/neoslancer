@@ -1,5 +1,7 @@
 #pragma once
 
+#include "neoslancer/WinVfxPalette.h"
+
 #include <cstdint>
 #include <vector>
 
@@ -39,5 +41,19 @@ struct TgaImage {
 };
 
 bool parseTga(const std::vector<uint8_t>& data, TgaImage& out);
+
+// Reads ONLY a color-mapped TGA's embedded color map, into a
+// WinVfxPalette - never decodes the image's own pixel data at all.
+// This is exactly what the real engine's SR_TGA_allocate_palette/
+// SR_TGA_get_palette do (Pass 61): `palette.tga`/`softpal.tga`/
+// `palette3.tga`/`oldpalette.tga` each happen to also contain a real,
+// viewable image (a HUD/UI icon atlas, unrelated to the palette itself
+// - see tgaviewer) that this function deliberately ignores, extracting
+// just the 256-entry color map that's actually consumed as the game's
+// master 8-bit palette. Unlike `.ccb`'s Block A (WinVfxPalette.h), a
+// TGA color map is already full 8-bit precision - no 6-bit-to-8-bit
+// scaling needed here. Returns false if the file has no color map at
+// all (colorMapType != 1) or is truncated.
+bool parseTgaPalette(const std::vector<uint8_t>& data, WinVfxPalette& out);
 
 } // namespace neoslancer

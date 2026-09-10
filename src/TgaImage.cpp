@@ -38,6 +38,27 @@ Rgba decodeEntry(const uint8_t* bytes, int depth) {
     }
 }
 
+// Reads the color map (if any) starting at `cursor`, advancing it past
+// the map on success. Shared by parseTga (which then goes on to decode
+// pixel data too) and parseTgaPalette (which stops here).
+bool decodeColorMap(const std::vector<uint8_t>& data, size_t& cursor, uint8_t colorMapType, uint16_t colorMapLength,
+                     uint8_t colorMapDepth, std::vector<Rgba>& colorMap) {
+    if (colorMapType != 1 || colorMapLength == 0) {
+        return true; // no color map - not an error, just nothing to do
+    }
+    const size_t bytesPerEntry = (static_cast<size_t>(colorMapDepth) + 7) / 8;
+    const size_t colorMapBytes = static_cast<size_t>(colorMapLength) * bytesPerEntry;
+    if (!inBounds(data, cursor, colorMapBytes)) {
+        return false;
+    }
+    colorMap.reserve(colorMapLength);
+    for (uint16_t i = 0; i < colorMapLength; ++i) {
+        colorMap.push_back(decodeEntry(&data[cursor + static_cast<size_t>(i) * bytesPerEntry], colorMapDepth));
+    }
+    cursor += colorMapBytes;
+    return true;
+}
+
 } // namespace
 
 bool parseTga(const std::vector<uint8_t>& data, TgaImage& out) {
@@ -62,17 +83,8 @@ bool parseTga(const std::vector<uint8_t>& data, TgaImage& out) {
     size_t cursor = 18u + idLength;
 
     std::vector<Rgba> colorMap;
-    if (colorMapType == 1 && colorMapLength > 0) {
-        const size_t bytesPerEntry = (static_cast<size_t>(colorMapDepth) + 7) / 8;
-        const size_t colorMapBytes = static_cast<size_t>(colorMapLength) * bytesPerEntry;
-        if (!inBounds(data, cursor, colorMapBytes)) {
-            return false;
-        }
-        colorMap.reserve(colorMapLength);
-        for (uint16_t i = 0; i < colorMapLength; ++i) {
-            colorMap.push_back(decodeEntry(&data[cursor + static_cast<size_t>(i) * bytesPerEntry], colorMapDepth));
-        }
-        cursor += colorMapBytes;
+    if (!decodeColorMap(data, cursor, colorMapType, colorMapLength, colorMapDepth, colorMap)) {
+        return false;
     }
 
     const bool isColorMapped = imageType == 1 || imageType == 9;
@@ -176,6 +188,38 @@ bool parseTga(const std::vector<uint8_t>& data, TgaImage& out) {
         }
     }
 
+    return true;
+}
+
+bool parseTgaPalette(const std::vector<uint8_t>& data, WinVfxPalette& out) {
+    if (!inBounds(data, 0, 18)) {
+        return false;
+    }
+
+    const uint8_t idLength = data[0];
+    const uint8_t colorMapType = data[1];
+    const uint16_t colorMapLength = readU16LE(data, 5);
+    const uint8_t colorMapDepth = data[7];
+    if (colorMapType != 1 || colorMapLength == 0) {
+        return false;
+    }
+
+    size_t cursor = 18u + idLength;
+    std::vector<Rgba> colorMap;
+    if (!decodeColorMap(data, cursor, colorMapType, colorMapLength, colorMapDepth, colorMap)) {
+        return false;
+    }
+
+    // The real engine reads a fixed 256-entry/768-byte buffer
+    // regardless of the file's own colorMapLength (Pass 61) - pad with
+    // black if shorter, ignore anything beyond 256 if longer.
+    for (size_t i = 0; i < out.colors.size(); ++i) {
+        if (i < colorMap.size()) {
+            out.colors[i] = {colorMap[i][0], colorMap[i][1], colorMap[i][2]};
+        } else {
+            out.colors[i] = {0, 0, 0};
+        }
+    }
     return true;
 }
 

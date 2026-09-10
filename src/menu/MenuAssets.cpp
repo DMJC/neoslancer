@@ -1,5 +1,7 @@
 #include "neoslancer/menu/MenuAssets.h"
 
+#include "neoslancer/TgaImage.h"
+
 #include <algorithm>
 #include <cctype>
 #include <filesystem>
@@ -52,10 +54,20 @@ bool loadMenuAssets(const std::string& dataRoot, MenuAssets& out) {
     }
 
     const std::vector<uint8_t> fontData = out.archive.read("handel.fnt");
-    const std::vector<uint8_t> paletteData = out.archive.read("palette.ccb");
+    // The real master 256-color palette InitializeGraphicsDevice loads at
+    // startup comes from a .tga file's embedded color map, not .ccb - a
+    // Pass 25/30/54 misattribution corrected by ../StarLancer/reversing
+    // docs Pass 61 (confidence 5, from the engine's own self-identifying
+    // SR_TGA_allocate_palette/SR_TGA_get_palette loaders). The real
+    // engine picks softpal.tga/palette.tga by a software-vs-hardware
+    // renderer mode flag this port has no equivalent of; softpal.tga is
+    // used unconditionally here (see TgaImage.h for what parseTgaPalette
+    // actually reads out of it - only the color map, never the sizeable
+    // real image `.tga` files like this one also happen to contain).
+    const std::vector<uint8_t> paletteData = out.archive.read("softpal.tga");
 
     out.loaded = !fontData.empty() && !paletteData.empty() && parseWinVfxFont(fontData, out.font) &&
-                 parseWinVfxPalette(paletteData, out.palette);
+                 parseTgaPalette(paletteData, out.palette);
 
     const std::vector<uint8_t> spriteData = out.archive.read("FRONTEND.SPR");
     out.spriteLoaded = !spriteData.empty() && parseWinVfxSprite(spriteData, out.sprite);

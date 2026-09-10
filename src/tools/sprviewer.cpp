@@ -6,12 +6,14 @@
 // window, using the same real GL texture rendering path
 // (WinVfxRenderer::drawShapeScaled) the actual menu screens use.
 //
-// A `.ccb` master palette is optional (also auto-decompressed if
-// RefPack-compressed) - without one, shapes render as a synthetic
+// A master palette (a real `.tga`'s color map, or a `.ccb`'s Block A -
+// see TgaImage.h/WinVfxPalette.h) is optional (also auto-decompressed
+// if RefPack-compressed) - without one, shapes render as a synthetic
 // identity greyscale palette (index N -> RGB(N,N,N)) so opaque/
 // transparent structure and RLE decode correctness are still visible
 // even with no real color data at hand.
 #include "neoslancer/RefPack.h"
+#include "neoslancer/TgaImage.h"
 #include "neoslancer/Window.h"
 #include "neoslancer/WinVfxPalette.h"
 #include "neoslancer/WinVfxSprite.h"
@@ -68,12 +70,14 @@ std::vector<uint8_t> loadPossiblyCompressed(const std::string& path) {
 
 void printUsage(const char* argv0) {
     std::fprintf(stderr,
-                  "usage: %s <file.spr> [palette.ccb]\n"
+                  "usage: %s <file.spr> [palette.tga|palette.ccb]\n"
                   "\n"
                   "If the .spr file carries its own embedded palette (Pass 59 -\n"
                   "confirmed for MEDAL1-6.SPR, each with its own distinct color\n"
                   "scheme; see WinVfxSprite.h), that's used automatically and takes\n"
-                  "priority unless [palette.ccb] is given explicitly.\n"
+                  "priority unless a palette argument is given explicitly. The real\n"
+                  "master palette is a .tga's color map, e.g. RESOURCE/softpal.tga -\n"
+                  "not a .ccb's Block A as this project originally assumed (Pass 61).\n"
                   "\n"
                   "Controls: Left/Right (or A/D) - prev/next shape\n"
                   "          Home/End           - first/last shape\n"
@@ -121,12 +125,19 @@ int main(int argc, char** argv) {
     // greyscale, since it's frequently the ONLY correct source of color
     // for a given file (confirmed for the medal-case UI's MEDAL*.SPR:
     // each file has its own distinct color scheme baked in, not shared
-    // via any global .ccb palette).
+    // via any global palette). A given palette argument can be either a
+    // `.tga` (the REAL master-palette source - Pass 61 - only its color
+    // map is read, the sizeable real image it also happens to contain is
+    // ignored) or a `.ccb` (the earlier, now-corrected assumption - still
+    // supported for comparison) - tried as TGA first since that format
+    // validates itself well enough (a real colorMapType/colorMapLength)
+    // that a non-TGA file essentially never parses as one by accident.
     neoslancer::WinVfxPalette palette;
     std::string paletteSource;
     if (!palettePath.empty()) {
         const std::vector<uint8_t> palData = loadPossiblyCompressed(palettePath);
-        if (!palData.empty() && neoslancer::parseWinVfxPalette(palData, palette)) {
+        if (!palData.empty() &&
+            (neoslancer::parseTgaPalette(palData, palette) || neoslancer::parseWinVfxPalette(palData, palette))) {
             paletteSource = std::filesystem::path(palettePath).filename().string();
         } else {
             std::fprintf(stderr, "sprviewer: warning: failed to load palette '%s'\n", palettePath.c_str());

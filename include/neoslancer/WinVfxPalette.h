@@ -6,35 +6,42 @@
 
 namespace neoslancer {
 
-// The engine's master 256-color palette, loaded from a `.ccb` resource
-// (palette.ccb/softpal.ccb) via SR_CCB_load and shared between SurrenderLib
-// (3D) and WinVFX (2D) - ../StarLancer/reversing/reverse_engineered_functions.md
-// Pass 30, confidence 4 for the struct below (derived directly from
-// SR_CCB_load's field-by-field construction).
+// A plain 256-entry RGB color table - used for more than one real
+// mechanism in this engine, not tied to a single file format.
 //
-// On-disk layout: [0x300 bytes: 256 RGB triples][0xc00 bytes: a second,
-// structurally-confirmed-but-functionally-unconfirmed block, plausibly a
-// precomputed lighting/shading ramp table][header scalars][variable
-// payload]. Only the first 768 bytes (256 x 3 color-component bytes, no
-// alpha) are needed to colorize 8-bit indexed WinVFX sprites/fonts, and
-// are all this parses.
+// **Not** the menu system's master global palette, despite this
+// project's own earlier passes assuming so: Pass 25/30/54 attributed
+// that role to a `.ccb` resource's "Block A" (loaded via `SR_CCB_load`)
+// and `parseWinVfxPalette` below was written against that assumption
+// (6-bit-VGA-precision Block A bytes, scaled `(v<<2)|(v>>4)` to 8-bit -
+// still accurate for what `.ccb` actually contains, see below). Pass 61
+// corrected this: the real master palette
+// `InitializeGraphicsDevice` loads at startup is a `.tga` file's
+// embedded color map instead (`palette.tga`/`softpal.tga` - see
+// TgaImage.h's `parseTgaPalette`, already full 8-bit precision, no
+// scaling needed), confirmed directly from the engine's own self-
+// identifying `SR_TGA_allocate_palette`/`SR_TGA_get_palette` loaders.
+// `MenuAssets` reads the palette from there now, not from here.
+// `.ccb`'s actual real purpose (what "Block A" really is, if not the
+// master palette) is an open question again.
 //
-// Those 768 bytes are 6-bit VGA DAC precision, not 8-bit: every byte in
-// every real .ccb file checked (palette.ccb/palette3.ccb/softpal.ccb) is
-// <= 63, confirmed by scanning all 768 bytes of each - the same
-// precision the engine's own per-shape PaletteOverrideRecord r6/g6/b6
-// fields document explicitly. parseWinVfxPalette scales each component
-// up to 8-bit (`(v<<2)|(v>>4)`) accordingly. Validated empirically
-// against a live, Wine-run copy of the real game: sampled real skin-tone
-// pixels from its Main Menu and found near-exact matches (color-distance
-// ~37 out of a max ~195075) in softpal.ccb's scaled entries - using the
-// raw, unscaled bytes instead produces washed-out, incoherent color
-// (everything capped at 25% brightness) that looks like decode noise but
-// isn't.
+// What `parseWinVfxPalette`/this struct ARE still genuinely used and
+// confirmed for: `.spr` files' own embedded per-file palette (Pass 59,
+// WinVfxSprite.h - a real mechanism, confirmed pixel-exact against a
+// real screenshot, storing the exact same 6-bit-VGA-precision 768 bytes
+// this function expects, just embedded in a `.spr` file instead of a
+// `.ccb` one) and the engine's separate per-shape `PaletteOverrideRecord`
+// r6/g6/b6 fields (same precision, WinVfxSprite.h) - i.e. this format/
+// scaling is real and used, just not for the ONE thing it was
+// originally thought to be.
 struct WinVfxPalette {
     std::array<std::array<uint8_t, 3>, 256> colors{}; // [index] = {R, G, B}
 };
 
+// Parses a `.ccb` resource's "Block A" (the first 768 bytes) as a
+// 6-bit-VGA-precision RGB table, scaling each component up to 8-bit.
+// See the struct comment above for what this is (and now isn't) used
+// for in this port.
 bool parseWinVfxPalette(const std::vector<uint8_t>& data, WinVfxPalette& out);
 
 } // namespace neoslancer
