@@ -9,6 +9,7 @@ add_library(neoslancer_data STATIC
     WinVfxFont.cpp
     WinVfxSprite.cpp
     WinVfxPalette.cpp
+    TgaImage.cpp
     vr/VRRoomGraph.cpp
 )
 
@@ -97,5 +98,29 @@ target_link_libraries(sprviewer PRIVATE
 )
 
 target_compile_options(sprviewer PRIVATE
+    $<$<CXX_COMPILER_ID:GNU,Clang>:-Wall -Wextra>
+)
+
+add_executable(tgaviewer
+    tools/tgaviewer.cpp
+    Window.cpp
+    gfx/Shader.cpp
+    gfx/Font.cpp
+    gfx/UIRenderer.cpp
+)
+
+target_include_directories(tgaviewer PRIVATE
+    ${SDL2_INCLUDE_DIRS}
+)
+
+target_link_libraries(tgaviewer PRIVATE
+    neoslancer_data
+    ${SDL2_LIBRARIES}
+    SDL2_ttf::SDL2_ttf
+    OpenGL::GL
+    GLEW::GLEW
+)
+
+target_compile_options(tgaviewer PRIVATE
     $<$<CXX_COMPILER_ID:GNU,Clang>:-Wall -Wextra>
 )

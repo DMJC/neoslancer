@@ -119,6 +119,21 @@ logged, not treated as an error, so partial/incomplete data still boots.
   /path/to/StarLancer/SOFTPAL.CCB` for a loose file, or
   `hogdump RESOURCE.HOG --extract FRONTEND.SPR /tmp/frontend.spr` first
   for one that only exists packed inside the main archive.
+- `tgaviewer <file.tga> [more.tga ...]` - an interactive SDL2/OpenGL
+  viewer for genuine, unmodified Targa images (`TgaImage.h`; loose
+  `.tga` files under `RESOURCE/` are transparently RefPack-decompressed
+  if needed, same as `.spr`/`.fnt`; `cd1`/`cd2` disc-extracted copies
+  are already plain TGA). Handles color-mapped, truecolor, and
+  grayscale images, RLE packets, and both storage orders. Pass several
+  files to step through them with Left/Right; R swaps red/blue, for
+  sanity-checking a color-mapped image's BGR-vs-RGB byte order. Notably
+  useful for `RESOURCE/palette.tga`/`softpal.tga`/`palette3.tga` -
+  reversing docs Pass 61 found these (not `.ccb`, contrary to this
+  project's own earlier assumption) are the real master 256-color
+  palette source `InitializeGraphicsDevice` loads at startup, though
+  `neoslancer` itself hasn't been migrated to read the palette from
+  here yet (still reads `.ccb`, whose actual real purpose Pass 61 also
+  reopened as an unresolved question).
 
 ## Layout
 
